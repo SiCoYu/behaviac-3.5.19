@@ -4,7 +4,7 @@
 <behavior name="Tank_FSM_MoveFire" agenttype="Player" fsm="true" version="5">
   <pars>
     <par name="rotateAngle" type="float" value="0" />
-    <par name="parIn_Self" type="Player*" value="null" />
+    <par name="parIn_Self" type="Player" value="null" />
   </pars>
   <node class="FSM" id="-1">
     <property initialid="1" />

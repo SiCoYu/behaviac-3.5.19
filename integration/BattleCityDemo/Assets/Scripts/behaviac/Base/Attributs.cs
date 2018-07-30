@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -17,11 +17,11 @@ namespace behaviac
 {
     public enum ERefType
     {
-        /**by default, a class is a ref type while a struct is a value type
-         *
+        /**by default, a class is a ref type while a struct is a value type 
+         * 
          * a ref type in designer will be displayed as a 'pointer, which is not expanded so that its members can't be configured individually
          **/
-        ERT_Undefined,
+        ERT_Undefined, 
 
         //forced to be a value type
         ERT_ValueType
@@ -95,18 +95,18 @@ namespace behaviac
     public class MemberMetaInfoAttribute : TypeMetaInfoAttribute
     {
         public MemberMetaInfoAttribute(string displayName, string description, bool bReadOnly) :
-        this(displayName, description)
+            this(displayName, description)
         {
             m_bIsReadonly = bReadOnly;
         }
 
         public MemberMetaInfoAttribute(string displayName, string description)
-        : this(displayName, description, 1.0f)
+            : this(displayName, description, 1.0f)
         {
         }
 
         public MemberMetaInfoAttribute(string displayName, string description, float range)
-        : base(displayName, description)
+            : base(displayName, description)
         {
             m_range = range;
         }
@@ -116,7 +116,7 @@ namespace behaviac
         }
 
         public MemberMetaInfoAttribute(bool bReadonly)
-        : this()
+            : this()
         {
             this.m_bIsReadonly = bReadonly;
         }
@@ -210,7 +210,7 @@ namespace behaviac
     public class MethodMetaInfoAttribute : TypeMetaInfoAttribute
     {
         public MethodMetaInfoAttribute(string displayName, string description)
-        : base(displayName, description)
+            : base(displayName, description)
         {
         }
 
@@ -227,7 +227,7 @@ namespace behaviac
         }
 
         public ParamMetaInfoAttribute(string displayName, string description, string defaultValue)
-        : base(displayName, description)
+            : base(displayName, description)
         {
             defaultValue_ = defaultValue;
             rangeMin_ = float.MinValue;
@@ -235,7 +235,7 @@ namespace behaviac
         }
 
         public ParamMetaInfoAttribute(string displayName, string description, string defaultValue, float rangeMin, float rangeMax)
-        : base(displayName, description)
+            : base(displayName, description)
         {
             defaultValue_ = defaultValue;
             rangeMin_ = rangeMin;
@@ -246,30 +246,21 @@ namespace behaviac
 
         public string DefaultValue
         {
-            get
-            {
-                return defaultValue_;
-            }
+            get { return defaultValue_; }
         }
 
         private float rangeMin_ = float.MinValue;
 
         public float RangeMin
         {
-            get
-            {
-                return rangeMin_;
-            }
+            get { return rangeMin_; }
         }
 
         private float rangeMax_ = float.MaxValue;
 
         public float RangeMax
         {
-            get
-            {
-                return rangeMax_;
-            }
+            get { return rangeMax_; }
         }
     }
 }

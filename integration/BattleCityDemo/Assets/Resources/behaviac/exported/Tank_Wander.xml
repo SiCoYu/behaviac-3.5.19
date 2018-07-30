@@ -3,7 +3,7 @@
 <!--Source File: Tank_Wander.xml-->
 <behavior name="Tank_Wander" agenttype="Player" version="5">
   <pars>
-    <par name="parIn_Self" type="Player*" value="null" />
+    <par name="parIn_Self" type="Player" value="null" />
     <par name="parT_RotateAngle" type="float" value="0" />
   </pars>
   <node class="DecoratorLoop" id="6">

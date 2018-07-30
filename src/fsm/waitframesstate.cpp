@@ -4,144 +4,182 @@
 #include "behaviac/fsm/transitioncondition.h"
 #include "behaviac/agent/agent.h"
 #include "behaviac/behaviortree/nodes/conditions/condition.h"
-#include "behaviac/common/meta.h"
 
-namespace behaviac {
-    WaitFramesState::WaitFramesState() : m_frames(0) {
-    }
+namespace behaviac
+{
+	WaitFramesState::WaitFramesState() : m_frames_var(0), m_frames_method(0)
+	{
+	}
 
-    WaitFramesState::~WaitFramesState() {
-        BEHAVIAC_DELETE(this->m_frames);
-    }
+	WaitFramesState::~WaitFramesState()
+	{
+        BEHAVIAC_DELETE(this->m_frames_method);
+	}
 
-    void WaitFramesState::load(int version, const char* agentType, const properties_t& properties) {
-        super::load(version, agentType, properties);
+	void WaitFramesState::load(int version, const char* agentType, const properties_t& properties)
+	{
+		super::load(version, agentType, properties);
 
-        for (propertie_const_iterator_t it = properties.begin(); it != properties.end(); ++it) {
-            const property_t& p = (*it);
+		for (propertie_const_iterator_t it = properties.begin(); it != properties.end(); ++it)
+		{
+			const property_t& p = (*it);
 
-			if (StringUtils::StringEqual(p.name, "Frames")) {
-                const char* pParenthesis = strchr(p.value, '(');
+			if (!strcmp(p.name, "Frames"))
+			{
+				const char* pParenthesis = strchr(p.value, '(');
 
-                if (pParenthesis == 0) {
-                    behaviac::string typeName;
-                    behaviac::string propertyName;
-                    //this->m_frames_var = Condition::LoadRight(p.value, typeName);
-                    this->m_frames = AgentMeta::ParseProperty(p.value);
-                } else {
-                    //method
-                    this->m_frames = AgentMeta::ParseMethod(p.value);
-                    //this->m_frames_method = Action::LoadMethod(p.value);
-                }
-            }
-        }
-    }
+				if (pParenthesis == 0)
+				{
+					behaviac::string typeName;
+					behaviac::string propertyName;
+					this->m_frames_var = Condition::LoadRight(p.value, typeName);
+				}
+				else
+				{
+					//method
+					this->m_frames_method = Action::LoadMethod(p.value);
+				}
+			}
+		}
+	}
 
-    int WaitFramesState::GetFrames(Agent* pAgent) const {
-        if (this->m_frames != NULL) {
-            uint64_t frames = *(uint64_t*)this->m_frames->GetValue(pAgent);
-			return (frames == ((uint64_t)-1) ? -1 : (int)(frames & 0x0000FFFF));
-        }
+	int WaitFramesState::GetFrames(Agent* pAgent) const
+	{
+		if (this->m_frames_var)
+		{
+			BEHAVIAC_ASSERT(this->m_frames_var);
+			TProperty<int>* pP = (TProperty<int>*)this->m_frames_var;
+			uint64_t frames = pP->GetValue(pAgent);
 
-        return 0;
-    }
+			return (frames == ((uint64_t)-1) ? -1 : (int)frames);
+		}
+		else if (this->m_frames_method)
+		{
+			Agent* pParent = Agent::GetInstance(pAgent, this->m_frames_method->GetInstanceNameString());
+			BEHAVIAC_ASSERT(pParent);
 
-    bool WaitFramesState::IsValid(Agent* pAgent, BehaviorTask* pTask) const {
-        if (WaitFramesState::DynamicCast(pTask->GetNode()) == 0) {
-            return false;
-        }
+			this->m_frames_method->run(pParent, pAgent);
 
-        return super::IsValid(pAgent, pTask);
-    }
+			int frames = this->m_frames_method->GetReturnValue<int>(pParent);
 
-    BehaviorTask* WaitFramesState::createTask() const {
-        WaitFramesStateTask* pTask = BEHAVIAC_NEW WaitFramesStateTask();
+			return frames;
+		}
 
-        return pTask;
-    }
+		return 0;
+	}
 
-    WaitFramesStateTask::WaitFramesStateTask() : StateTask(), m_start(0), m_frames(0) {
-    }
+	bool WaitFramesState::IsValid(Agent* pAgent, BehaviorTask* pTask) const
+	{
+		if (WaitFramesState::DynamicCast(pTask->GetNode()) == 0)
+		{
+			return false;
+		}
 
-    WaitFramesStateTask::~WaitFramesStateTask() {
-    }
+		return super::IsValid(pAgent, pTask);
+	}
 
-    void WaitFramesStateTask::copyto(BehaviorTask* target) const {
-        super::copyto(target);
+	BehaviorTask* WaitFramesState::createTask() const
+	{
+		WaitFramesStateTask* pTask = BEHAVIAC_NEW WaitFramesStateTask();
 
-        BEHAVIAC_ASSERT(WaitFramesStateTask::DynamicCast(target));
-        WaitFramesStateTask* ttask = (WaitFramesStateTask*)target;
-        ttask->m_start = this->m_start;
-        ttask->m_frames = this->m_frames;
-    }
+		return pTask;
+	}
 
-    void WaitFramesStateTask::save(IIONode* node) const {
-        super::save(node);
+	WaitFramesStateTask::WaitFramesStateTask() : StateTask(), m_start(0), m_frames(0)
+	{
+	}
 
-        if (this->m_status != BT_INVALID) {
-            CIOID  startId("start");
-            node->setAttr(startId, this->m_start);
+	WaitFramesStateTask::~WaitFramesStateTask()
+	{
+	}
 
-            CIOID  framesId("frames");
-            node->setAttr(framesId, this->m_frames);
-        }
-    }
+	void WaitFramesStateTask::copyto(BehaviorTask* target) const
+	{
+		super::copyto(target);
 
-    void WaitFramesStateTask::load(IIONode* node) {
-        super::load(node);
+		BEHAVIAC_ASSERT(WaitFramesStateTask::DynamicCast(target));
+		WaitFramesStateTask* ttask = (WaitFramesStateTask*)target;
+		ttask->m_start = this->m_start;
+		ttask->m_frames = this->m_frames;
+	}
 
-        if (this->m_status != BT_INVALID) {
-            CIOID  startId("start");
-            behaviac::string attrStr;
-            node->getAttr(startId, attrStr);
-            StringUtils::ParseString(attrStr.c_str(), this->m_start);
+	void WaitFramesStateTask::save(ISerializableNode* node) const
+	{
+		super::save(node);
 
-            CIOID  framesId("frames");
-            node->getAttr(framesId, attrStr);
-            StringUtils::ParseString(attrStr.c_str(), this->m_frames);
-        }
-    }
+		if (this->m_status != BT_INVALID)
+		{
+			CSerializationID  startId("start");
+			node->setAttr(startId, this->m_start);
 
-    int WaitFramesStateTask::GetFrames(Agent* pAgent) const {
-        BEHAVIAC_ASSERT(WaitFramesState::DynamicCast(this->GetNode()));
-        const WaitFramesState* pWaitNode = (const WaitFramesState*)(this->GetNode());
+			CSerializationID  framesId("frames");
+			node->setAttr(framesId, this->m_frames);
+		}
+	}
 
-        return pWaitNode ? pWaitNode->GetFrames(pAgent) : 0;
-    }
+	void WaitFramesStateTask::load(ISerializableNode* node)
+	{
+		super::load(node);
 
-    bool WaitFramesStateTask::onenter(Agent* pAgent) {
-        BEHAVIAC_UNUSED_VAR(pAgent);
+		if (this->m_status != BT_INVALID)
+		{
+			CSerializationID  startId("start");
+			behaviac::string attrStr;
+			node->getAttr(startId, attrStr);
+			StringUtils::FromString(attrStr.c_str(), this->m_start);
+
+			CSerializationID  framesId("frames");
+			node->getAttr(framesId, attrStr);
+			StringUtils::FromString(attrStr.c_str(), this->m_frames);
+		}
+	}
+
+	int WaitFramesStateTask::GetFrames(Agent* pAgent) const
+	{
+		BEHAVIAC_ASSERT(WaitFramesState::DynamicCast(this->GetNode()));
+		const WaitFramesState* pWaitNode = (const WaitFramesState*)(this->GetNode());
+
+		return pWaitNode ? pWaitNode->GetFrames(pAgent) : 0;
+	}
+
+	bool WaitFramesStateTask::onenter(Agent* pAgent)
+	{
+		BEHAVIAC_UNUSED_VAR(pAgent);
 
         this->m_nextStateId = -1;
 
-        this->m_start = Workspace::GetInstance()->GetFrameSinceStartup();
-        this->m_frames = this->GetFrames(pAgent);
+		this->m_start = Workspace::GetInstance()->GetFrameSinceStartup();
+		this->m_frames = this->GetFrames(pAgent);
 
-        if (this->m_frames <= 0) {
-            return false;
-        }
+		if (this->m_frames <= 0)
+		{
+			return false;
+		}
 
-        return true;
-    }
+		return true;
+	}
 
-    void WaitFramesStateTask::onexit(Agent* pAgent, EBTStatus s) {
-        BEHAVIAC_UNUSED_VAR(pAgent);
-        BEHAVIAC_UNUSED_VAR(s);
-    }
+	void WaitFramesStateTask::onexit(Agent* pAgent, EBTStatus s)
+	{
+		BEHAVIAC_UNUSED_VAR(pAgent);
+		BEHAVIAC_UNUSED_VAR(s);
+	}
 
-    EBTStatus WaitFramesStateTask::update(Agent* pAgent, EBTStatus childStatus) {
-        BEHAVIAC_UNUSED_VAR(pAgent);
-        BEHAVIAC_UNUSED_VAR(childStatus);
+	EBTStatus WaitFramesStateTask::update(Agent* pAgent, EBTStatus childStatus)
+	{
+		BEHAVIAC_UNUSED_VAR(pAgent);
+		BEHAVIAC_UNUSED_VAR(childStatus);
 
-        if (Workspace::GetInstance()->GetFrameSinceStartup() - this->m_start + 1 >= this->m_frames) {
-            BEHAVIAC_ASSERT(WaitFramesState::DynamicCast(this->GetNode()) != 0, "node is not an WaitFramesState");
-            WaitFramesState* pStateNode = (WaitFramesState*)(this->GetNode());
+		if (Workspace::GetInstance()->GetFrameSinceStartup() - this->m_start + 1 >= this->m_frames)
+		{
+			BEHAVIAC_ASSERT(WaitFramesState::DynamicCast(this->GetNode()) != 0, "node is not an WaitFramesState");
+			WaitFramesState* pStateNode = (WaitFramesState*)(this->GetNode());
 
-            pStateNode->Update(pAgent, this->m_nextStateId);
+			pStateNode->Update(pAgent, this->m_nextStateId);
 
-            return BT_SUCCESS;
-        }
+			return BT_SUCCESS;
+		}
 
-        return BT_RUNNING;
-    }
+		return BT_RUNNING;
+	}
 }

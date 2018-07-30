@@ -83,7 +83,16 @@ namespace behaviac
 
         #endregion events
 
-        /// Generate a new task
+        /// <summary>
+        /// Generate a new task for the <paramref name="agent"/> based on the current world state as
+        /// described by the <paramref name="agentState"/>.
+        /// </summary>
+        /// <param name="agent">
+        /// The agent for which the task is being generated. This object instance must be of the
+        /// same type as the type for which the Task was developed
+        /// </param>
+        /// <param name="agentState">The current world state required by the planner</param>
+        /// <returns></returns>
         private PlannerTask GeneratePlan()
         {
             // If the planner is currently executing a task marked NotInterruptable, do not generate
@@ -229,7 +238,6 @@ namespace behaviac
                 LogManager.Instance.Log("[plan_node_begin]{0}\n", ni);
                 a.LogVariables(true);
             }
-
 #endif
         }
 
@@ -298,7 +306,6 @@ namespace behaviac
 
                 a.LogVariables(true);
             }
-
 #endif
         }
 
@@ -466,6 +473,8 @@ namespace behaviac
             return false;
         }
 
+        //private PlannerTask decomposeTask(Task task, int depth) {
+        //because called form other node , so change the private to public
         public PlannerTask decomposeTask(Task task, int depth)
         {
             var methodsCount = task.GetChildrenCount();

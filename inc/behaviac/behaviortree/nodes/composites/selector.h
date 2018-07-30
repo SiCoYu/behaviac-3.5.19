@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,14 +11,15 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef _BEHAVIAC_BEHAVIORTREE_SELECTOR_H_
-#define _BEHAVIAC_BEHAVIORTREE_SELECTOR_H_
+#ifndef BEHAVIAC_BEHAVIORTREE_SELECTOR_H
+#define BEHAVIAC_BEHAVIORTREE_SELECTOR_H
 
-#include "behaviac/common/base.h"
+#include "behaviac/base/base.h"
 #include "behaviac/behaviortree/behaviortree.h"
 #include "behaviac/behaviortree/behaviortree_task.h"
 
-namespace behaviac {
+namespace behaviac
+{
     /*! \addtogroup treeNodes Behavior Tree
     * @{
     * \addtogroup ReferencedBehavior
@@ -33,15 +34,14 @@ namespace behaviac {
     reaches the end of its child list, it returns Failure and resets its child index ¨C meaning
     the first child in the line will be ticked on the next tick of the Selector.
     */
-    class BEHAVIAC_API Selector : public BehaviorNode {
+    class BEHAVIAC_API Selector : public BehaviorNode
+    {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(Selector, BehaviorNode);
 
         Selector();
         virtual ~Selector();
-#if BEHAVIAC_USE_HTN
         virtual bool decompose(BehaviorNode* node, PlannerTaskComplex* seqTask, int depth, Planner* planner);
-#endif //BEHAVIAC_USE_HTN
         virtual void load(int version, const char* agentType, const properties_t& properties);
         EBTStatus SelectorUpdate(Agent* pAgent, EBTStatus childStatus, int& activeChildIndex, behaviac::vector<BehaviorTask*>& children);
         virtual bool Evaluate(Agent* pAgent);
@@ -52,15 +52,16 @@ namespace behaviac {
         virtual BehaviorTask* createTask() const;
     };
 
-    class BEHAVIAC_API SelectorTask : public CompositeTask {
+    class BEHAVIAC_API SelectorTask : public CompositeTask
+    {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(SelectorTask, CompositeTask);
         SelectorTask();
         virtual ~SelectorTask();
     protected:
         virtual void copyto(BehaviorTask* target) const;
-        virtual void save(IIONode* node) const;
-        virtual void load(IIONode* node);
+        virtual void save(ISerializableNode* node) const;
+        virtual void load(ISerializableNode* node);
 
         virtual bool onenter(Agent* pAgent);
         virtual void onexit(Agent* pAgent, EBTStatus s);
@@ -70,4 +71,4 @@ namespace behaviac {
     /*! @} */
 }
 
-#endif//_BEHAVIAC_BEHAVIORTREE_SELECTOR_H_
+#endif//BEHAVIAC_BEHAVIORTREE_SELECTOR_H

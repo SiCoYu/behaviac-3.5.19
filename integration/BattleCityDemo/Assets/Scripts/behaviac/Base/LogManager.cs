@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -163,12 +163,9 @@ namespace behaviac
                             //[tick]Ship.Ship_1 ships\suicide.xml.Selector[1]:update [1]
                             int count = Workspace.Instance.UpdateActionCount(btMsg);
 
-                            if (actionResultStr != "running")
-                            {
-                                string buffer = string.Format("[tick]{0} {1} [{2}] [{3}]\n", agentName, btMsg, actionResultStr, count);
+                            string buffer = string.Format("[tick]{0} {1} [{2}] [{3}]\n", agentName, btMsg, actionResultStr, count);
 
-                                Output(pAgent, buffer);
-                            }
+                            Output(pAgent, buffer);
                         }
                         else if (mode == LogMode.ELM_jump)
                         {
@@ -219,11 +216,8 @@ namespace behaviac
                     agentClassName = agentClassName.Replace(".", "::");
 
                     string agentInstanceName = pAgent.GetName();
-
                     if (!string.IsNullOrEmpty(agentInstanceName))
-                    {
                         agentInstanceName = agentInstanceName.Replace(".", "::");
-                    }
 
                     //[property]WorldState.World WorldState.time.276854364
                     //[property]Ship.Ship_1 GameObject.HP.100
@@ -236,7 +230,6 @@ namespace behaviac
                     bool bOutput = true;
 
 #if BEHAVIAC_USE_HTN
-
                     if (pAgent.PlanningTop >= 0)
                     {
                         string agentFullName = string.Format("{0}#{1}", agentClassName, agentInstanceName);
@@ -269,9 +262,7 @@ namespace behaviac
                             p.Add(varName, value);
                         }
                     }
-
 #endif//
-
                     if (bOutput)
                     {
                         Output(pAgent, buffer);
@@ -298,7 +289,7 @@ namespace behaviac
                         //string agentClassName = pAgent.GetObjectTypeName();
                         //string agentInstanceName = pAgent.GetName();
 
-                        BehaviorTreeTask bt = !System.Object.ReferenceEquals(pAgent, null) ? pAgent.CurrentTreeTask : null;
+                        BehaviorTreeTask bt = !System.Object.ReferenceEquals(pAgent, null) ? pAgent.CurrentBT : null;
 
                         string btName;
 
@@ -437,7 +428,6 @@ namespace behaviac
 
                 LogManager.Instance.Log(pAgent, typeName, full_name, valueStr);
             }
-
 #endif
         }
 
@@ -459,12 +449,9 @@ namespace behaviac
             {
                 System.IO.StreamWriter fp = GetFile(pAgent);
 
-                if (fp != null)
+                lock(fp)
                 {
-                    lock (fp)
-                    {
-                        fp.Flush();
-                    }
+                    fp.Flush();
                 }
             }
 
@@ -480,7 +467,6 @@ namespace behaviac
                 try
                 {
                     var e = m_logs.Values.GetEnumerator();
-
                     while (e.MoveNext())
                     {
                         e.Current.Flush();
@@ -494,14 +480,12 @@ namespace behaviac
                 {
                 }
             }
-
 #endif
         }
 
         virtual protected  System.IO.StreamWriter GetFile(Agent pAgent)
         {
 #if !BEHAVIAC_RELEASE
-
             if (Config.IsLogging)
             {
                 System.IO.StreamWriter fp = null;
@@ -522,14 +506,6 @@ namespace behaviac
                         {
                             buffer = string.Format("Agent_$_{0:3}.log", agentId);
                         }
-
-#if !BEHAVIAC_NOT_USE_UNITY
-                        if (UnityEngine.Application.platform != UnityEngine.RuntimePlatform.WindowsEditor &&
-                            UnityEngine.Application.platform != UnityEngine.RuntimePlatform.WindowsPlayer)
-                        {
-                            buffer = Path.Combine(UnityEngine.Application.persistentDataPath, buffer);
-                        }
-#endif
                     }
                     else
                     {
@@ -582,7 +558,7 @@ namespace behaviac
 
                     if (fp != null)
                     {
-                        lock (fp)
+                        lock(fp)
                         {
                             fp.Write(buffer);
 

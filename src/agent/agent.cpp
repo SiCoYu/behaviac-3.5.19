@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -15,54 +15,86 @@
 #include "behaviac/agent/registermacros.h"
 #include "behaviac/agent/context.h"
 #include "behaviac/agent/state.h"
+
 #include "behaviac/property/property.h"
-#include "behaviac/common/file/filesystem.h"
+#include "behaviac/property/property_t.h"
+#include "behaviac/base/file/filesystem.h"
+#include "behaviac/base/object/method.h"
 #include "behaviac/behaviortree/behaviortree.h"
 #include "behaviac/behaviortree/behaviortree_task.h"
-#include "behaviac/common/profiler/profiler.h"
-#include "./propertynode.h"
-#include "behaviac/common/meta.h"
-#include "behaviac/common/member.h"
 
-#if BEHAVIAC_CCDEFINE_MSVC
-#define _BEHAVIAC_M_STRING_COMPILER_NAME_ BEHAVIAC_JOIN_TOKENS("compiler ", BEHAVIAC_CCDEFINE_NAME)
+#include "behaviac/base/core/profiler/profiler.h"
+#include "behaviac/htn/agentproperties.h"
+
+#include "./propertynode.h"
+
+#if BEHAVIAC_COMPILER_MSVC
+#define _BEHAVIAC_M_STRING_COMPILER_NAME_ BEHAVIAC_JOIN_TOKENS("compiler ", BEHAVIAC_COMPILER_NAME)
 #pragma message (_BEHAVIAC_M_STRING_COMPILER_NAME_)
 #endif
 
-BEHAVIAC_BEGIN_STRUCT(IList) {
+BEHAVIAC_BEGIN_PROPERTIES(IList)
+{
     //
 }
-BEHAVIAC_END_STRUCT()
+BEHAVIAC_END_PROPERTIES()
 
-BEHAVIAC_BEGIN_STRUCT(System::Object) {
+BEHAVIAC_BEGIN_PROPERTIES(System::Object)
+{
     //
 }
-BEHAVIAC_END_STRUCT()
+BEHAVIAC_END_PROPERTIES()
 
-namespace behaviac {
-    bool TryStart();
+BEHAVIAC_BEGIN_PROPERTIES(behaviac::Agent)
+{
+    //REGISTER_MEMBER
+    BEHAVIAC_REGISTER_METHOD(VectorLength);
+    BEHAVIAC_REGISTER_METHOD(VectorAdd);
+    BEHAVIAC_REGISTER_METHOD(VectorRemove);
+    BEHAVIAC_REGISTER_METHOD(VectorContains);
+    BEHAVIAC_REGISTER_METHOD(VectorClear);
+
+    BEHAVIAC_REGISTER_METHOD(LogMessage);
+}
+BEHAVIAC_END_PROPERTIES()
+
+namespace behaviac
+{
+	bool TryStart();
 
     uint32_t Agent::ms_idMask = 0xffffffff;
     Agent::AgentTypeIndexMap_t* Agent::ms_agent_type_index = 0;
 
-    uint32_t Agent::IdMask() {
+    uint32_t Agent::IdMask()
+    {
         return Agent::ms_idMask;
     }
 
-    void Agent::SetIdMask(uint32_t idMask) {
+    void Agent::SetIdMask(uint32_t idMask)
+    {
         Agent::ms_idMask = idMask;
     }
 
     int Agent::ms_agent_index = 0;
     CFactory<Agent>* Agent::ms_factory;
 
-    Agent::AgentNames_t* Agent::ms_names;
-    Agent::AgentNames_t* Agent::NamesPtr() {
-        return ms_names;
+    Agent::AgentMetas_t* Agent::ms_metas;
+    Agent::AgentMetas_t& Agent::Metas()
+    {
+        if (!ms_metas)
+        {
+            ms_metas = BEHAVIAC_NEW AgentMetas_t;
+        }
+
+        BEHAVIAC_ASSERT(ms_metas);
+        return *ms_metas;
     }
 
-    Agent::AgentNames_t& Agent::Names() {
-        if (!ms_names) {
+    Agent::AgentNames_t* Agent::ms_names;
+    Agent::AgentNames_t& Agent::Names()
+    {
+        if (!ms_names)
+        {
             ms_names = BEHAVIAC_NEW AgentNames_t;
         }
 
@@ -71,8 +103,10 @@ namespace behaviac {
         return *ms_names;
     }
 
-    CFactory<Agent>& Agent::Factory() {
-        if (!ms_factory) {
+    CFactory<Agent>& Agent::Factory()
+    {
+        if (!ms_factory)
+        {
             typedef CFactory<Agent> FactoryAgent;
             ms_factory = BEHAVIAC_NEW FactoryAgent;
         }
@@ -81,59 +115,64 @@ namespace behaviac {
     }
 
     //m_id == -1, not a valid agent
-    Agent::Agent() : m_context_id(-1), m_currentBT(0), m_id(-1), m_priority(0), m_bActive(1), m_referencetree(false), _balckboard_bound(false), m_excutingTreeTask(0), m_variables(0), m_idFlag(0xffffffff), m_planningTop(-1) {
-        bool bOk = TryStart();
-        BEHAVIAC_ASSERT(bOk);
-        BEHAVIAC_UNUSED_VAR(bOk);
+    Agent::Agent() : m_context_id(-1), m_currentBT(0), m_id(-1), m_priority(0), m_bActive(1), m_referencetree(false), _balckboard_bound(false), m_idFlag(0xffffffff), m_planningTop(-1)
+    {
+		bool bOk = TryStart();
+		BEHAVIAC_ASSERT(bOk);
+		BEHAVIAC_UNUSED_VAR(bOk);
 
 #if !BEHAVIAC_RELEASE
         this->m_debug_verify = 0;
-        this->m_debug_in_exec = 0;
+		this->m_debug_in_exec = 0;
 #endif//#if !BEHAVIAC_RELEASE
     }
 
-    //m_id == -1, not a valid agent
-    Agent::Agent(const Agent& rA) {
-		BEHAVIAC_UNUSED_VAR(rA);
-		BEHAVIAC_ASSERT(false);
-    }
-
-    void Agent::SetName(const char* instanceName) {
-        if (!instanceName) {
+    void Agent::SetName(const char* instanceName)
+    {
+        if (!instanceName)
+        {
             uint32_t	typeId = 0;
             const char* typeFullName = this->GetObjectTypeName();
 
             const char* typeName = typeFullName;
             const char* pIt = strrchr(typeFullName, ':');
 
-            if (pIt) {
+            if (pIt)
+            {
                 typeName = pIt + 1;
             }
 
-            if (!ms_agent_type_index) {
+            if (!ms_agent_type_index)
+            {
                 ms_agent_type_index = BEHAVIAC_NEW AgentTypeIndexMap_t;
             }
 
             AgentTypeIndexMap_t::iterator it = ms_agent_type_index->find(typeFullName);
 
-            if (it == ms_agent_type_index->end()) {
+            if (it == ms_agent_type_index->end())
+            {
                 typeId = 0;
                 (*ms_agent_type_index)[typeFullName] = 1;
-            } else {
+            }
+            else
+            {
                 typeId = (*ms_agent_type_index)[typeFullName]++;
             }
 
-            char temp[1024];
+			char temp[1024];
 
-            string_sprintf(temp, "%s_%d_%d", typeName, typeId, this->m_id);
+			string_sprintf(temp, "%s_%d_%d", typeName, typeId, this->m_id);
 
-            this->m_name += temp;
-        } else {
+			this->m_name += temp;
+        }
+        else
+        {
             this->m_name = instanceName;
         }
     }
 
-    Agent::~Agent() {
+    Agent::~Agent()
+    {
 #if BEHAVIAC_ENABLE_NETWORKD
         this->UnSubsribeToNetwork();
 #endif//#if BEHAVIAC_ENABLE_NETWORKD
@@ -141,32 +180,21 @@ namespace behaviac {
 #if !BEHAVIAC_RELEASE
         Agent::Agents_t* agents = Agents(true);
 
-        if (agents) {
+        if (agents)
+        {
             const char* agentClassName = this->GetObjectTypeName();
             const behaviac::string& instanceName = this->GetName();
 
-            char aName[1024];
-            string_sprintf(aName, "%s#%s", agentClassName, instanceName.c_str());
+			char aName[1024];
+			string_sprintf(aName, "%s#%s", agentClassName, instanceName.c_str());
 
-            Agent::Agents_t::iterator it = agents->find(aName);
-
-            if (it != agents->end()) {
-                agents->erase(it);
-            } else {
-                for (it = agents->begin(); it != agents->end(); ++it) {
-                    Agent* pAgent = it->second;
-
-                    if (pAgent == this) {
-                        agents->erase(it);
-                        break;
-                    }
-                }
-            }
+            agents->erase(aName);
         }
 
 #endif
 
-        for (BehaviorTreeTasks_t::iterator it = this->m_behaviorTreeTasks.begin(); it != m_behaviorTreeTasks.end(); ++it) {
+        for (BehaviorTreeTasks_t::iterator it = this->m_behaviorTreeTasks.begin(); it != m_behaviorTreeTasks.end(); ++it)
+        {
             BehaviorTreeTask* bt = *it;
 
             Workspace::GetInstance()->DestroyBehaviorTreeTask(bt, this);
@@ -174,48 +202,33 @@ namespace behaviac {
 
         this->m_behaviorTreeTasks.clear();
 
-        if (this->m_variables != NULL) {
-            this->m_variables->Clear(true);
+        for (AgentEvents_t::iterator it = this->m_eventInfos.begin(); it != this->m_eventInfos.end(); ++it)
+        {
+            CNamedEvent* p = it->second;
+            BEHAVIAC_DELETE(p);
         }
+
+        this->m_eventInfos.clear();
+
+        this->m_variables.Clear(true);
     }
 
-    void Agent::SetVariableFromString(const char* variableName, const char* valueStr) {
-        //IInstanceMember* valueMember = AgentMeta::ParseProperty(valueStr);
+	void Agent::destroy_()
+	{
+		int contextId = this->GetContextId();
+		Context& c = Context::GetContext(contextId);
 
-		//if (valueMember)
-		if (valueStr)
+		c.RemoveAgent(this);
+
+		// It should be deleted absolutely here.
+		if (!c.IsExecuting())
 		{
-			uint32_t variableId = MakeVariableId(variableName);
-			IInstantiatedVariable* v = this->GetInstantiatedVariable(variableId);
+			delete this;
+		}
+	}
 
-            if (v != NULL) {
-                //v->SetValue(this, (void*)valueMember->GetValueObject(this));
-				v->SetValueFromString(valueStr);
-                return;
-            }
-
-            IProperty* prop = this->GetProperty(variableId);
-
-            if (prop) {
-                //prop->SetValueFrom(this, valueMember);
-				prop->SetValueFromString(this, valueStr);
-            }
-        }
-    }
-
-    void Agent::destroy_() {
-        int contextId = this->GetContextId();
-        Context& c = Context::GetContext(contextId);
-
-        c.RemoveAgent(this);
-
-        // It should be deleted absolutely here.
-        if (!c.IsExecuting()) {
-            delete this;
-        }
-    }
-
-    void Agent::Init_(int contextId, Agent* pAgent, short priority, const char* agentInstanceName) {
+	void Agent::Init_(int contextId, Agent* pAgent, short priority, const char* agentInstanceName)
+    {
 #if !BEHAVIAC_RELEASE
         pAgent->m_debug_verify = kAGENT_DEBUG_VERY;
 #endif//#if !BEHAVIAC_RELEASE
@@ -236,15 +249,13 @@ namespace behaviac {
         Agent::Agents_t* agents = Agents(false);
         BEHAVIAC_ASSERT(agents);
 
-		if (agents) {
-			const char* agentClassName = pAgent->GetObjectTypeName();
-			const behaviac::string& instanceName = pAgent->GetName();
+        const char* agentClassName = pAgent->GetObjectTypeName();
+        const behaviac::string& instanceName = pAgent->GetName();
 
-			char aName[1024];
-			string_sprintf(aName, "%s#%s", agentClassName, instanceName.c_str());
+		char aName[1024];
+        string_sprintf(aName, "%s#%s", agentClassName, instanceName.c_str());
 
-			(*agents)[aName] = pAgent;
-		}
+        (*agents)[aName] = pAgent;
 #endif//BEHAVIAC_RELEASE
 
 #if BEHAVIAC_ENABLE_NETWORKD
@@ -252,97 +263,145 @@ namespace behaviac {
 #endif//#if BEHAVIAC_ENABLE_NETWORKD
     }
 
-    bool Agent::SaveDataToFile(const char* fileName) {
+    bool Agent::IsRegistered(const char* agentClassName)
+    {
+        CStringID classId(agentClassName);
+        return Factory().IsRegistered(classId);
+    }
+
+    bool Agent::IsAgentClassName(const char* agentClassName)
+    {
+        CStringID agentClassId(agentClassName);
+
+        bool bResult = IsAgentClassName(agentClassId);
+
+        return bResult;
+    }
+
+    bool Agent::IsAgentClassName(const CStringID& agentClassId)
+    {
+        //CStringID classId(agentClassName);
+        //return Factory().IsRegistered(classId);
+        AgentMetas_t::iterator it = Agent::ms_metas->find(agentClassId);
+
+        if (it != Agent::ms_metas->end())
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    bool Agent::SaveDataToFile(const char* fileName)
+    {
         BEHAVIAC_ASSERT(fileName);
         const char* className = this->GetObjectTypeName();
-        XmlNodeReference xmlInfo = CreateXmlNode(className);
+        XmlNodeRef xmlInfo = CreateXmlNode(className);
         this->SaveToXML(xmlInfo);
 
         CFileSystem::MakeSureDirectoryExist(fileName);
         return xmlInfo->saveToFile(fileName);
     }
 
-    bool Agent::LoadDataFromFile(const char* fileName) {
+    bool Agent::LoadDataFromFile(const char* fileName)
+    {
         BEHAVIAC_ASSERT(fileName);
         const char* className = this->GetObjectTypeName();
-        XmlNodeReference xmlInfo = CreateXmlNode(className);
+        XmlNodeRef xmlInfo = CreateXmlNode(className);
         CTextNode node(xmlInfo);
 
-        if (node.LoadFromFile(fileName)) {
-			CTagObject::Load(this, &node, className);
+        if (node.LoadFromFile(fileName))
+        {
+            this->Load(&node);
             return true;
         }
 
         return false;
     }
 
-    bool Agent::SaveDataToFile(IFile* file) {
+    bool Agent::SaveDataToFile(IFile* file)
+    {
         const char* className = this->GetObjectTypeName();
-        XmlNodeReference xmlInfo = CreateXmlNode(className);
+        XmlNodeRef xmlInfo = CreateXmlNode(className);
         this->SaveToXML(xmlInfo);
 
         return xmlInfo->saveToFile(file);
     }
 
-    bool Agent::LoadDataFromFile(IFile* file) {
+    bool Agent::LoadDataFromFile(IFile* file)
+    {
         const char* className = this->GetObjectTypeName();
-        XmlNodeReference xmlInfo = CreateXmlNode(className);
+        XmlNodeRef xmlInfo = CreateXmlNode(className);
         CTextNode node(xmlInfo);
 
-        if (node.LoadFromFile(file)) {
-			CTagObject::Load(this, &node, className);
+        if (node.LoadFromFile(file))
+        {
+            this->Load(&node);
             return true;
         }
 
         return false;
     }
 
-    void behaviac::Agent::LoadFromXML(const behaviac::XmlConstNodeRef& xmlNode) {
-        behaviac::CTextNode textNode(xmlNode);
-		const char* className = this->GetObjectTypeName();
+    //bool Agent::SaveStateToFile(const char* fileName)
+    //{
+    //    BEHAVIAC_ASSERT(fileName);
+    //    const char* className = this->GetObjectTypeName();
+    //    XmlNodeRef xmlInfo = CreateXmlNode(className);
+    //    CTextNode node(xmlInfo);
+    //    this->SaveState(&node);
+    //    CFileSystem::MakeSureDirectoryExist(fileName);
+    //    return xmlInfo->saveToFile(fileName);
+    //}
 
-		CTagObject::Load(this, &textNode, className);
-    }
+    //bool Agent::SaveTypeToFile(const char* fileName)
+    //{
+    //    const char* className = this->GetObjectTypeName();
+    //    XmlNodeRef xmlInfo = CreateXmlNode(className);
+    //    this->GetMembersDescription(xmlInfo);
+    //    this->GetMethodsDescription(xmlInfo);
+    //    CFileSystem::MakeSureDirectoryExist(fileName);
+    //    return xmlInfo->saveToFile(fileName);
+    //}
 
-    void behaviac::Agent::SaveToXML(const behaviac::XmlNodeReference& xmlNode) {
-        behaviac::CTextNode textNode(xmlNode);
-		const char* className = this->GetObjectTypeName();
+    bool Agent::MetaComparator::operator()(const Agent::MetaInfo_t* _left, const Agent::MetaInfo_t* _right)
+    {
+        if (_left->bInternal && !_right->bInternal)
+        {
+            return true;
 
-		CTagObject::Save(this, &textNode, className);
-    }
-
-    behaviac::map<uint32_t, IInstantiatedVariable*> Agent::GetCustomizedVariables() {
-        const char* agentClassName = this->GetObjectTypeName();
-        uint32_t agentClassId = MakeVariableId(agentClassName);
-        AgentMeta* meta = AgentMeta::GetMeta(agentClassId);
-        behaviac::map<uint32_t, IInstantiatedVariable*> vars;
-
-        if (meta != NULL) {
-            vars = meta->InstantiateCustomizedProperties();
-
-            return vars;
+        }
+        else if (!_left->bInternal && _right->bInternal)
+        {
+            return false;
         }
 
-        BEHAVIAC_ASSERT(false);
-        return vars;
-    }
+        if (!_left->baseClassFullName && _right->baseClassFullName)
+        {
+            return true;
 
-    AgentState* Agent::GetVariables() {
-        if (m_variables == NULL) {
-            behaviac::map<uint32_t, IInstantiatedVariable*> vars = this->GetCustomizedVariables();
-            this->m_variables = BEHAVIAC_NEW AgentState(vars);
+        }
+        else if (_left->baseClassFullName && !_right->baseClassFullName)
+        {
+            return false;
         }
 
-        return this->m_variables;
+        int pos = strcmp(_left->classFullName, _right->classFullName);
+
+        return pos <= 0;
     }
 
-    bool Agent::NameComparator::operator()(const Agent::AgentName_t* _left, const Agent::AgentName_t* _right) {
+    bool Agent::NameComparator::operator()(const Agent::AgentName_t* _left, const Agent::AgentName_t* _right)
+    {
         return _left->instantceName_ < _right->instantceName_;
     }
 
-    struct ObjectDescriptorComparator {
-        bool operator()(const char* _left, const char* _right) {
-            if (string_icmp(_left, _right) < 0) {
+    struct ObjectDescriptorComparator
+    {
+        bool operator()(const char* _left, const char* _right)
+        {
+            if (string_icmp(_left, _right) < 0)
+            {
                 return true;
             }
 
@@ -350,10 +409,177 @@ namespace behaviac {
         }
     };
 
-    void Agent::Cleanup() {
+
+    bool Agent::ExportMetas(const char* xmlMetaFilePath)
+    {
+        BEHAVIAC_UNUSED_VAR(xmlMetaFilePath);
 #if !BEHAVIAC_RELEASE
 
-        if (ms_agents) {
+        if (Config::IsDesktopPlatform())
+        {
+            behaviac::vector<const MetaInfo_t*> metasSorted;
+
+            const AgentMetas_t& metas = Metas();
+
+            if (metas.size() > 1)
+            {
+                for (AgentMetas_t::const_iterator it = metas.begin(); it != metas.end(); ++it)
+                {
+                    //const CStringID& classId = it->first;
+                    const MetaInfo_t& m = it->second;
+
+                    metasSorted.push_back(&m);
+                }
+            }
+
+            std::sort(metasSorted.begin(), metasSorted.end(), MetaComparator());
+
+            XmlNodeRef metasNode = CreateXmlNode("metas");
+            metasNode->setAttr("version", "5");
+            metasNode->setAttr("language", "cpp");
+
+            // collect all types
+            CTagTypeDescriptor::TypesMap_t exportedTypes;
+            behaviac::vector<const char*> exportedTypesVector;
+
+            for (behaviac::vector<const MetaInfo_t*>::iterator it = metasSorted.begin(); it != metasSorted.end(); ++it)
+            {
+                const MetaInfo_t& m = *(*it);
+                const CTagObjectDescriptor* pObjectDesc = m.descriptor;
+
+                pObjectDesc->GetMembersDescription(&exportedTypes, 0, NULL);
+                pObjectDesc->GetMethodsDescription(&exportedTypes, 0, NULL);
+            }
+
+            for (CTagTypeDescriptor::TypesMap_t::iterator it = exportedTypes.begin(); it != exportedTypes.end(); ++it)
+            {
+                exportedTypesVector.push_back(it->first);
+            }
+
+            std::sort(exportedTypesVector.begin(), exportedTypesVector.end(), ObjectDescriptorComparator());
+
+            // export all enums
+            XmlNodeRef typesInfo = metasNode->newChild("types");
+
+            for (behaviac::vector<const char*>::iterator it = exportedTypesVector.begin(); it != exportedTypesVector.end(); ++it)
+            {
+                const char* pTypeName = *it;
+                const CTagTypeDescriptor* pTypeDesc = exportedTypes[pTypeName];
+                const EnumClassDescription_t* pEnumDesc = EnumClassDescription_t::DynamicCast(pTypeDesc);
+
+                if (pEnumDesc)
+                {
+                    XmlNodeRef enumNode = typesInfo->newChild("enumtype");
+                    enumNode->setAttr("Type", pTypeName);
+
+                    pEnumDesc->GetMembersDescription(NULL, 0, enumNode);
+                }
+            }
+
+            // export all structs
+            for (behaviac::vector<const char*>::iterator it = exportedTypesVector.begin(); it != exportedTypesVector.end(); ++it)
+            {
+                const char* pTypeName = *it;
+                const CTagTypeDescriptor* pTypeDesc = exportedTypes[pTypeName];
+                const CTagObjectDescriptor* pObjectDesc = CTagObjectDescriptor::DynamicCast(pTypeDesc);
+
+                if (pObjectDesc)
+                {
+                    XmlNodeRef structNode = typesInfo->newChild("struct");
+                    structNode->setAttr("Type", pTypeName);
+
+                    pObjectDesc->GetMembersDescription(NULL, 0, structNode);
+                }
+            }
+
+            // export all agents
+            XmlNodeRef xmlInfo = metasNode->newChild("agents");
+
+            for (behaviac::vector<const MetaInfo_t*>::iterator it = metasSorted.begin(); it != metasSorted.end(); ++it)
+            {
+                const MetaInfo_t& m = *(*it);
+
+                const CTagObjectDescriptor* pObjectDesc = m.descriptor;
+
+                XmlNodeRef agentInfo = xmlInfo->newChild("agent");
+
+                agentInfo->setAttr("classfullname", m.classFullName);
+
+                if (m.baseClassFullName)
+                {
+                    agentInfo->setAttr("base", m.baseClassFullName);
+
+                }
+                else
+                {
+                    BEHAVIAC_ASSERT(m.bInternal);
+
+                    ////classFullName is behaviac::Agent, don't add base
+                    //if (strcmp(m.classFullName, "behaviac::Agent") != 0)
+                    //{
+                    //	agentInfo->setAttr("base", "behaviac::Agent");
+                    //}
+                }
+
+                if (m.bInternal)
+                {
+                    agentInfo->setAttr("inherited", "true");
+                }
+
+                pObjectDesc->GetMembersDescription(NULL, 0, agentInfo);
+                pObjectDesc->GetMethodsDescription(NULL, 0, agentInfo);
+            }
+
+            // export all instances
+            Agent::AgentNames_t& names = Agent::Names();
+
+            if (names.size() > 0)
+            {
+                behaviac::vector<const AgentName_t*> namesSorted;
+
+                for (AgentNames_t::iterator it = names.begin(); it != names.end(); ++it)
+                {
+                    AgentName_t& m = it->second;
+
+                    namesSorted.push_back(&m);
+                }
+
+                std::sort(namesSorted.begin(), namesSorted.end(), NameComparator());
+
+                XmlNodeRef instances = metasNode->newChild("instances");
+
+                for (behaviac::vector<const AgentName_t*>::const_iterator it = namesSorted.begin(); it != namesSorted.end(); ++it)
+                {
+                    //const behaviac::string& instanceName = it->first;
+                    const AgentName_t& m = *(*it);
+
+                    XmlNodeRef instance = instances->newChild("instance");
+
+                    instance->setAttr("name", m.instantceName_);
+                    instance->setAttr("class", m.classFullName_);
+                    instance->setAttr("DisplayName", m.displayName_);
+                    instance->setAttr("Desc", m.desc_);
+                }
+            }
+
+            CFileSystem::MakeSureDirectoryExist(xmlMetaFilePath);
+            return metasNode->saveToFile(xmlMetaFilePath);
+        }
+#else
+		BEHAVIAC_LOGWARNING("when BEHAVIAC_RELEASE is defined, no Meta will be exported!");
+#endif//BEHAVIAC_RELEASE
+        return false;
+    }
+
+    void Agent::Cleanup()
+    {
+        //agent meta + struct meta
+        CleanupTagObjectDescriptorMaps();
+
+#if !BEHAVIAC_RELEASE
+
+        if (ms_agents)
+        {
             ms_agents->clear();
             BEHAVIAC_DELETE(ms_agents);
             ms_agents = 0;
@@ -361,13 +587,23 @@ namespace behaviac {
 
 #endif//
 
-        if (ms_names) {
+        //agent metas is part of TagObjectDescriptorMaps
+        if (ms_metas)
+        {
+            ms_metas->clear();
+            BEHAVIAC_DELETE(ms_metas);
+            ms_metas = 0;
+        }
+
+        if (ms_names)
+        {
             ms_names->clear();
             BEHAVIAC_DELETE(ms_names);
             ms_names = 0;
         }
 
-        if (ms_agent_type_index) {
+        if (ms_agent_type_index)
+        {
             ms_agent_type_index->clear();
             BEHAVIAC_DELETE(ms_agent_type_index);
             ms_agent_type_index = 0;
@@ -383,129 +619,97 @@ namespace behaviac {
     }
 
 #if BEHAVIAC_ENABLE_NETWORKD
-    void Agent::SubsribeToNetwork() {
+    void Agent::SubsribeToNetwork()
+    {
         behaviac::Network* pNw = behaviac::Network::GetInstance();
 
-        if (pNw && !pNw->IsSinglePlayer()) {
+        if (pNw && !pNw->IsSinglePlayer())
+        {
+            const CTagObjectDescriptor& od = this->GetDescriptor();
+
+            MethodsContainer::const_iterator it = od.ms_methods.begin();
+            MethodsContainer::const_iterator itEnd = od.ms_methods.end();
+
+            for (; it != itEnd; ++it)
+            {
+                behaviac::CMethodBase* m = *it;
+                //m->GetUiInfo(parent, xmlNode);
+                m->SubsribeToNetwork(this);
+            }
         }
     }
 
-    void Agent::UnSubsribeToNetwork() {
+    void Agent::UnSubsribeToNetwork()
+    {
         behaviac::Network* pNw = behaviac::Network::GetInstance();
 
-        if (pNw && !pNw->IsSinglePlayer()) {
+        if (pNw && !pNw->IsSinglePlayer())
+        {
+            const CTagObjectDescriptor& od = this->GetDescriptor();
+
+            MethodsContainer::const_iterator it = od.ms_methods.begin();
+            MethodsContainer::const_iterator itEnd = od.ms_methods.end();
+
+            for (; it != itEnd; ++it)
+            {
+                behaviac::CMethodBase* m = *it;
+                //m->GetUiInfo(parent, xmlNode);
+                m->UnSubsribeToNetwork(this);
+            }
         }
     }
 
-    void Agent::ReplicateProperties() {
+    void Agent::ReplicateProperties()
+    {
         behaviac::Network* pNw = behaviac::Network::GetInstance();
 
-        if (pNw && !pNw->IsSinglePlayer()) {
+        if (pNw && !pNw->IsSinglePlayer())
+        {
             const CTagObjectDescriptor& od = this->GetDescriptor();
             od.ReplicateProperties(this);
         }
     }
 #endif//#if BEHAVIAC_ENABLE_NETWORKD
-
-    void Agent::LogVariables(bool bForce) {
+    void Agent::LogVariables(bool bForce)
+    {
         BEHAVIAC_UNUSED_VAR(bForce);
 #if !BEHAVIAC_RELEASE
 
-        if (Config::IsLoggingOrSocketing()) {
+        if (Config::IsLoggingOrSocketing())
+        {
             BEHAVIAC_PROFILE("Agent::LogVariables");
 
-            this->GetVariables()->Log(this, bForce);
-            //property
-            const char* className = this->GetObjectTypeName();
-            uint32_t classId = MakeVariableId(className);
-            AgentMeta* meta = AgentMeta::GetMeta(classId);
-
-            if (meta != NULL) {
-                //local var
-                if (this->m_excutingTreeTask != NULL) {
-                    for (behaviac::map<uint32_t, IInstantiatedVariable*>::iterator it =
-                             this->m_excutingTreeTask->m_localVars.begin();
-                         it != this->m_excutingTreeTask->m_localVars.end(); ++it) {
-                        IInstantiatedVariable* pVar = it->second;
-                        pVar->Log(this);
-                    }
-                }
-
-                //customized property
-                this->m_variables->Log(this, false);
-
-                //member property
-                behaviac::map<uint32_t, IProperty*> memberProperties = meta->GetMemberProperties();
-
-                for (behaviac::map<uint32_t, IProperty*>::iterator it = memberProperties.begin();
-                     it != memberProperties.end();
-                     ++it) {
-                    IProperty* pProperty = it->second;
-                    uint32_t id = it->first;
-
-                    if (!pProperty->IsArrayItem()) {
-                        bool bNew = false;
-                        IValue* pVar = NULL;
-
-                        if (this->_members.find(id) != this->_members.end()) {
-                            pVar = this->_members[id];
-                        } else {
-                            bNew = true;
-                            pVar = pProperty->CreateIValue();
-                            this->_members[id] = pVar;
-                        }
-
-                        pVar->Log(this, pProperty->Name(), bNew);
-                    }
-                }
-
-            }
-
+            this->m_variables.Log(this, bForce);
         }
 
 #endif//BEHAVIAC_RELEASE
     }
 
-	void Agent::LogRunningNodes()
-	{
-#if !BEHAVIAC_RELEASE
-		if (Config::IsLoggingOrSocketing() && this->m_currentBT != NULL)
-		{
-			behaviac::vector<BehaviorTask*> runningNodes = this->m_currentBT->GetRunningNodes(false);
-
-			for (unsigned int i = 0; i < runningNodes.size(); ++i)
-			{
-				string btStr = BehaviorTask::GetTickInfo(this, runningNodes[i], "enter");
-
-				//empty btStr is for internal BehaviorTreeTask
-				if (!StringUtils::IsNullOrEmpty(btStr.c_str()))
-				{
-					LogManager::GetInstance()->Log(this, btStr.c_str(), EAR_success, ELM_tick);
-				}
-			}
-		}
-#endif//BEHAVIAC_RELEASE
-	}
-
-    void Agent::ResetChangedVariables() {
-        //TODO: Reset() method removed, the below code need to remove
-        //this->m_variables.Reset();
+    void Agent::ResetChangedVariables()
+    {
+        this->m_variables.Reset();
     }
 
-    void Agent::InitVariableRegistry() {
+    void Agent::InitVariableRegistry()
+    {
         this->ResetChangedVariables();
 
 #if !BEHAVIAC_RELEASE
-        if (Config::IsLoggingOrSocketing()) {
+
+        if (Config::IsLoggingOrSocketing())
+        {
             const char* className = this->GetObjectTypeName();
+
             CPropertyNode properyNode(this, className);
 
-			CTagObject::Save(this, &properyNode, className);
+            this->Save(&properyNode);
         }
+
 #endif
     }
 
-    void Agent::UpdateVariableRegistry() {
+    void Agent::UpdateVariableRegistry()
+    {
         //#if !BEHAVIAC_RELEASE
         //		if (Config::IsLoggingOrSocketing())
         //		{
@@ -522,13 +726,13 @@ namespace behaviac {
         this->ReplicateProperties();
 #endif//#if BEHAVIAC_ENABLE_NETWORKD
     }
-    const void* Agent::GetValueObject(IInstantiatedVariable* var) {
-        return  var->GetValueObject(this);
-    }
-    struct bt_finder {
+
+    struct bt_finder
+    {
         behaviac::string bt;
 
-        bool operator()(const behaviac::string& it) const {
+        bool operator()(const behaviac::string& it) const
+        {
             return it == bt;
         }
 
@@ -538,12 +742,14 @@ namespace behaviac {
 
     bool IsValidPath(const char* relativePath);
 
-    void Agent::_btsetcurrent(const char* relativePath, TriggerMode triggerMode, bool bByEvent) {
+	void Agent::_btsetcurrent(const char* relativePath, TriggerMode triggerMode, bool bByEvent, bool bStateStackPushed)
+    {
         bool bEmptyPath = (!relativePath || *relativePath == '\0');
         BEHAVIAC_ASSERT(bEmptyPath || behaviac::StringUtils::FindExtension(relativePath) == 0);
         BEHAVIAC_ASSERT(IsValidPath(relativePath));
 
-        if (!bEmptyPath) {
+        if (!bEmptyPath)
+        {
             //if (this->m_currentBT != 0 && this->m_currentBT->GetName() == relativePath)
             //{
             //	//the same bt is set again
@@ -552,24 +758,31 @@ namespace behaviac {
 
             bool bLoaded = Workspace::GetInstance()->Load(relativePath);
 
-            if (!bLoaded) {
+            if (!bLoaded)
+            {
                 behaviac::string agentName = this->GetClassTypeName();
                 agentName += "::";
                 agentName += this->m_name;
 
                 BEHAVIAC_ASSERT(false);
                 BEHAVIAC_LOGINFO("%s is not a valid loaded behavior tree of %s", relativePath, agentName.c_str());
-            } else {
+            }
+            else
+            {
                 Workspace::GetInstance()->RecordBTAgentMapping(relativePath, this);
 
-                if (this->m_currentBT) {
+                if (this->m_currentBT)
+                {
                     //if trigger mode is 'return', just push the current bt 'oldBt' on the stack and do nothing more
                     //'oldBt' will be restored when the new triggered one ends
-                    if (triggerMode == TM_Return) {
-                        BehaviorTreeStackItem_t item(this->m_currentBT, triggerMode, bByEvent);
+                    if (triggerMode == TM_Return)
+                    {
+						BehaviorTreeStackItem_t item(this->m_currentBT, triggerMode, bByEvent, bStateStackPushed);
                         BEHAVIAC_ASSERT(this->m_btStack.size() < 200, "recursive?");
                         this->m_btStack.push_back(item);
-                    } else if (triggerMode == TM_Transfer) {
+                    }
+                    else if (triggerMode == TM_Transfer)
+                    {
                         //don't use the bt stack to restore, we just abort the current one.
                         //as the bt node has onenter/onexit, the abort can make them paired
                         //BEHAVIAC_ASSERT(this->m_currentBT->GetName() != relativePath);
@@ -581,11 +794,13 @@ namespace behaviac {
 
                 BehaviorTreeTask* pTask = 0;
 
-                for (BehaviorTreeTasks_t::iterator it = this->m_behaviorTreeTasks.begin(); it != this->m_behaviorTreeTasks.end(); ++it) {
+                for (BehaviorTreeTasks_t::iterator it = this->m_behaviorTreeTasks.begin(); it != this->m_behaviorTreeTasks.end(); ++it)
+                {
                     BehaviorTreeTask* bt = *it;
                     BEHAVIAC_ASSERT(bt);
 
-                    if (bt->GetName() == relativePath) {
+                    if (bt->GetName() == relativePath)
+                    {
                         pTask = bt;
                         break;
                     }
@@ -593,136 +808,182 @@ namespace behaviac {
 
                 bool bRecursive = false;
 
-                if (pTask) {
-                    for (BehaviorTreeStack_t::iterator it = this->m_btStack.begin(); it != this->m_btStack.end(); ++it) {
+                if (pTask)
+                {
+                    for (BehaviorTreeStack_t::iterator it = this->m_btStack.begin(); it != this->m_btStack.end(); ++it)
+                    {
                         BehaviorTreeStackItem_t& item = *it;
 
-                        if (item.bt->GetName() == relativePath) {
+                        if (item.bt->GetName() == relativePath)
+                        {
                             bRecursive = true;
                             break;
                         }
                     }
 
-                    if (pTask->GetStatus() != BT_INVALID) {
-                        pTask->reset(this);
-                    }
+					if (pTask->GetStatus() != BT_INVALID) {
+						pTask->reset(this);
+					}
                 }
 
-                if (pTask == 0 || bRecursive) {
+                if (pTask == 0 || bRecursive)
+                {
                     pTask = Workspace::GetInstance()->CreateBehaviorTreeTask(relativePath);
                     BEHAVIAC_ASSERT(pTask != 0);
                     this->m_behaviorTreeTasks.push_back(pTask);
                 }
 
-                this->_setCurrentTreeTask(pTask);
+                this->m_currentBT = pTask;
 
-                //this->_balckboard_bound = false;
-                //this->GetVariables()->Clear(false);
+				//this->_balckboard_bound = false;
+				this->m_variables.Clear(false);
             }
-        } else {
+        }
+        else
+        {
             BEHAVIAC_ASSERT(true);
         }
     }
 
-    void Agent::btsetcurrent(const char* relativePath) {
+    void Agent::btsetcurrent(const char* relativePath)
+    {
         this->_btsetcurrent(relativePath, TM_Transfer, false);
     }
 
-    void Agent::btreferencetree(const char* relativePath) {
+    void Agent::btreferencetree(const char* relativePath)
+    {
         this->m_referencetree = true;
         this->_btsetcurrent(relativePath, TM_Return, false);
     }
 
-    void Agent::bteventtree(const char* relativePath, TriggerMode triggerMode) {
-        this->_btsetcurrent(relativePath, triggerMode, true);
+	void Agent::bteventtree(const char* relativePath, TriggerMode triggerMode, bool bStateStackPushed)
+    {
+		this->_btsetcurrent(relativePath, triggerMode, true, bStateStackPushed);
     }
 
-    void Agent::btresetcurrent() {
-        if (this->m_currentBT != 0) {
+    void Agent::btresetcurrent()
+    {
+        if (this->m_currentBT != 0)
+        {
             this->m_currentBT->reset(this);
         }
     }
 
-    EBTStatus Agent::btexec_() {
-        if (this->m_currentBT != NULL) {
+    EBTStatus Agent::btexec_()
+    {
+        if (this->m_currentBT != NULL)
+        {
             BehaviorTreeTask* pCurrent = this->m_currentBT;
             EBTStatus s = this->m_currentBT->exec(this);
 
-            while (s != BT_RUNNING) {
+            while (s != BT_RUNNING)
+            {
                 //this->m_currentBT->reset(this);
-                if (this->m_btStack.size() > 0) {
+                if (this->m_btStack.size() > 0)
+                {
                     //get the last one
                     BehaviorTreeStackItem_t& lastOne = this->m_btStack.back();
                     this->m_btStack.pop_back();
-                    this->_setCurrentTreeTask(lastOne.bt);
+                    this->m_currentBT = lastOne.bt;
 
-                    bool bExecCurrent = false;
+
+					bool bExecCurrent = false;
 
                     if (lastOne.triggerMode == TM_Return) {
-                        if (!lastOne.triggerByEvent) {
-                            if (this->m_currentBT != pCurrent) {
+                        if (!lastOne.triggerByEvent)
+                        {
+                            if (this->m_currentBT != pCurrent)
+                            {
                                 s = this->m_currentBT->resume(this, s);
-                            } else {
+                            }
+                            else
+                            {
                                 BEHAVIAC_ASSERT(true);
                             }
-                        } else {
-                            bExecCurrent = true;
                         }
-                    } else {
-                        bExecCurrent = true;
-                    }
+						else {
+							bExecCurrent = true;
 
-                    if (bExecCurrent) {
+							if (lastOne.bStateStackPushed) {
+								this->m_variables.PopTop();
+							}
+						}
+                    }
+					else {
+						bExecCurrent = true;
+					}
+                    
+					if (bExecCurrent) {
                         pCurrent = this->m_currentBT;
                         s = this->m_currentBT->exec(this);
                         break;
                     }
-                } else {
+                }
+                else
+                {
                     //don't clear it
                     //this->m_currentBT = 0;
                     break;
                 }
             }
 
-			if (s != BT_RUNNING) {
-				this->m_excutingTreeTask = 0;
-			}
-
             return s;
-        } else {
+        }
+        else
+        {
             //BEHAVIAC_LOGWARNING("NO ACTIVE BT!\n");
         }
 
         return BT_INVALID;
     }
+    void Agent::InstantiateProperties()
+    {
+        if (!_balckboard_bound)
+        {
+			//this->m_variables.Clear(true);
 
-    EBTStatus Agent::btexec() {
+            AgentProperties* bb = AgentProperties::Get(this->GetObjectTypeName());
+
+            if (bb != NULL)
+            {
+                bb->Instantiate(this);
+            }
+
+            _balckboard_bound = true;
+        }
+    }
+    EBTStatus Agent::btexec()
+    {
 #if BEHAVIAC_ENABLE_PROFILING
         BEHAVIAC_PROFILE("Agent::btexec");
 #endif
 
-        if (this->m_bActive) {
+        if (this->m_bActive)
+        {
 #if !BEHAVIAC_RELEASE
             BEHAVIAC_ASSERT(this->m_debug_verify == kAGENT_DEBUG_VERY, "Agent can only be created by Agent::Create or Agent::Create!");
-            this->m_debug_count = 0;
-            this->m_debug_in_exec = 1;
+			this->m_debug_count = 0;
+			this->m_debug_in_exec = 1;
 #endif//#if !BEHAVIAC_RELEASE
+            this->InstantiateProperties();
 
             this->UpdateVariableRegistry();
 
             EBTStatus s = this->btexec_();
 
-            while (this->m_referencetree && s == BT_RUNNING) {
+            while (this->m_referencetree && s == BT_RUNNING)
+            {
                 this->m_referencetree = false;
                 s = this->btexec_();
             }
 
-            if (this->IsMasked()) {
+            if (this->IsMasked())
+            {
                 this->LogVariables(false);
             }
 
 #if !BEHAVIAC_RELEASE
-            this->m_debug_in_exec = 0;
+			this->m_debug_in_exec = 0;
 #endif//#if !BEHAVIAC_RELEASE
 
             return s;
@@ -731,75 +992,80 @@ namespace behaviac {
         return BT_INVALID;
     }
 
-    void Agent::btonevent(const char* btEvent, behaviac::map<uint32_t, IInstantiatedVariable*>* eventParams) {
-        if (this->m_currentBT != NULL) {
-            const char* agentClassName = this->GetObjectTypeName();
-            uint32_t agentClassId = MakeVariableId(agentClassName);
-            AgentMeta* meta = AgentMeta::GetMeta(agentClassId);
-
-            if (meta != NULL) {
-                uint32_t eventId = MakeVariableId(btEvent);
-                IInstanceMember* e = meta->GetMethod(eventId);
-
-                if (e != NULL) {
+	bool Agent::btonevent(const char* btEvent, bool bStateStackPushed)
+    {
+        if (this->m_currentBT)
+        {
 #if !BEHAVIAC_RELEASE
-                    BEHAVIAC_ASSERT(this->m_debug_in_exec == 0, "FireEvent should not be called during the Agent is in btexec");
-
+			BEHAVIAC_ASSERT(this->m_debug_in_exec == 0, "FireEvent should not be called during the Agent is in btexec");
 #endif
-                    this->m_currentBT->onevent(this, btEvent, eventParams);
-                } else {
-                    BEHAVIAC_ASSERT(false, "unregistered event %s", btEvent);
-                }
-            }
+
+			bool bFired = false;
+			bool bGoOn = this->m_currentBT->onevent(this, btEvent, bStateStackPushed, bFired);
+			BEHAVIAC_UNUSED_VAR(bGoOn);
+
+			return bFired;
         }
+
+		return false;
     }
 
-    BehaviorTreeTask* Agent::btgetcurrent() {
+    BehaviorTreeTask* Agent::btgetcurrent()
+    {
         return m_currentBT;
     }
 
-    const BehaviorTreeTask* Agent::btgetcurrent() const {
+    const BehaviorTreeTask* Agent::btgetcurrent() const
+    {
         return m_currentBT;
     }
 
-    bool Agent::btload(const char* relativePath, bool bForce) {
+    bool Agent::btload(const char* relativePath, bool bForce)
+    {
         bool bOk = Workspace::GetInstance()->Load(relativePath, bForce);
 
-        if (bOk) {
+        if (bOk)
+        {
             Workspace::GetInstance()->RecordBTAgentMapping(relativePath, this);
         }
 
         return bOk;
     }
 
-    void Agent::btunload(const char* relativePath) {
+    void Agent::btunload(const char* relativePath)
+    {
         BEHAVIAC_ASSERT(behaviac::StringUtils::FindExtension(relativePath) == 0, "no extention to specify");
         BEHAVIAC_ASSERT(IsValidPath(relativePath));
 
         //clear the current bt if it is the current bt
-        if (this->m_currentBT && this->m_currentBT->GetName() == relativePath) {
+        if (this->m_currentBT && this->m_currentBT->GetName() == relativePath)
+        {
             const BehaviorNode* btNode = this->m_currentBT->GetNode();
             BEHAVIAC_ASSERT(BehaviorTree::DynamicCast(btNode) != 0);
             const BehaviorTree* bt = (const BehaviorTree*)btNode;
             this->btunload_pars(bt);
 
-            this->_setCurrentTreeTask(0);
+            this->m_currentBT = 0;
         }
 
         //remove it from stack
-        for (BehaviorTreeStack_t::iterator it = this->m_btStack.begin(); it != this->m_btStack.end(); ++it) {
+        for (BehaviorTreeStack_t::iterator it = this->m_btStack.begin(); it != this->m_btStack.end(); ++it)
+        {
             BehaviorTreeStackItem_t& item = *it;
 
-            if (item.bt->GetName() == relativePath) {
+            if (item.bt->GetName() == relativePath)
+            {
                 this->m_btStack.erase(it);
                 break;
             }
         }
 
-        for (BehaviorTreeTasks_t::iterator iti = this->m_behaviorTreeTasks.begin(); iti != m_behaviorTreeTasks.end(); ++iti) {
+        for (BehaviorTreeTasks_t::iterator iti = this->m_behaviorTreeTasks.begin(); iti != m_behaviorTreeTasks.end(); ++iti)
+        {
             BehaviorTreeTask* task = *iti;
 
-            if (task->GetName() == relativePath) {
+            if (task->GetName() == relativePath)
+            {
                 Workspace::GetInstance()->DestroyBehaviorTreeTask(task, this);
 
                 this->m_behaviorTreeTasks.erase(iti);
@@ -807,31 +1073,33 @@ namespace behaviac {
             }
         }
 
-        Workspace::GetInstance()->UnLoad(relativePath);
+		Workspace::GetInstance()->UnLoad(relativePath);
     }
 
-    void Agent::bthotreloaded(const BehaviorTree* bt) {
+    void Agent::bthotreloaded(const BehaviorTree* bt)
+    {
         this->btunload_pars(bt);
     }
 
-    void Agent::btunload_pars(const BehaviorTree* bt) {
-        if (bt->m_localProps.size() > 0) {
-            BehaviorTree* bt_ = (BehaviorTree*)bt;
+    void Agent::btunload_pars(const BehaviorTree* bt)
+    {
+        if (bt->m_pars)
+        {
+            for (BehaviorNode::Properties_t::iterator it = bt->m_pars->begin(); it != bt->m_pars->end(); ++it)
+            {
+                Property* property_ = *it;
 
-            for (BehaviorTree::Properties_t::iterator it = bt_->m_localProps.begin(); it != bt_->m_localProps.end(); ++it) {
-                IProperty* property_ = it->second;
-
-                BEHAVIAC_DELETE(property_);
+                property_->UnLoad(this);
             }
-
-            bt_->m_localProps.clear();
         }
     }
 
-    void Agent::btunloadall() {
+    void Agent::btunloadall()
+    {
         vector<const BehaviorTree*> bts;
 
-        for (BehaviorTreeTasks_t::iterator it = this->m_behaviorTreeTasks.begin(); it != m_behaviorTreeTasks.end(); ++it) {
+        for (BehaviorTreeTasks_t::iterator it = this->m_behaviorTreeTasks.begin(); it != m_behaviorTreeTasks.end(); ++it)
+        {
             BehaviorTreeTask* btTask = *it;
 
             const BehaviorNode* btNode = btTask->GetNode();
@@ -839,139 +1107,274 @@ namespace behaviac {
             const BehaviorTree* bt = (const BehaviorTree*)btNode;
             bool bFound = false;
 
-            for (uint32_t i = 0; i < bts.size(); ++i) {
+            for (uint32_t i = 0; i < bts.size(); ++it)
+            {
                 const BehaviorTree* it1 = bts[i];
 
-                if (it1 == bt) {
+                if (it1 == bt)
+                {
                     bFound = true;
                     break;
                 }
             }
 
-            if (!bFound) {
+            if (!bFound)
+            {
                 bts.push_back(bt);
             }
 
             Workspace::GetInstance()->DestroyBehaviorTreeTask(btTask, this);
         }
 
-        //for (uint32_t i = 0; i < bts.size(); ++i) {
-        //    const BehaviorTree* it = bts[i];
+        for (uint32_t i = 0; i < bts.size(); ++i)
+        {
+            const BehaviorTree* it = bts[i];
 
-        //    this->btunload_pars(it);
+            this->btunload_pars(it);
 
-        //    const behaviac::string& btName = it->GetName();
-        //    Workspace::GetInstance()->UnLoad(btName.c_str());
-        //}
+            const behaviac::string& btName = it->GetName();
+
+            Workspace::GetInstance()->UnLoad(btName.c_str());
+        }
 
         this->m_behaviorTreeTasks.clear();
 
-        this->_setCurrentTreeTask(0);
+        this->m_currentBT = 0;
         this->m_btStack.clear();
 
-        this->GetVariables()->Unload();
-        this->_balckboard_bound = false;
+        this->m_variables.Unload();
+		this->_balckboard_bound = false;
     }
 
-    void Agent::btreloadall() {
-        this->_setCurrentTreeTask(0);
+    void Agent::btreloadall()
+    {
+        this->m_currentBT = 0;
         this->m_btStack.clear();
 
         behaviac::vector<behaviac::string> bts;
 
         //collect the bts
-        for (BehaviorTreeTasks_t::iterator it = this->m_behaviorTreeTasks.begin(); it != m_behaviorTreeTasks.end(); ++it) {
+        for (BehaviorTreeTasks_t::iterator it = this->m_behaviorTreeTasks.begin(); it != m_behaviorTreeTasks.end(); ++it)
+        {
             BehaviorTreeTask* bt = *it;
 
             const behaviac::string& btName = bt->GetName();
             bool bFound = false;
 
-            for (unsigned int i = 0; i < bts.size(); ++i) {
-                if (bts[i] == btName) {
+            for (unsigned int i = 0; i < bts.size(); ++i)
+            {
+                if (bts[i] == btName)
+                {
                     bFound = true;
                     break;
                 }
             }
 
-            if (!bFound) {
+            if (!bFound)
+            {
                 bts.push_back(btName);
             }
 
             Workspace::GetInstance()->DestroyBehaviorTreeTask(bt, this);
         }
 
-        for (unsigned int i = 0; i < bts.size(); ++i) {
+        for (unsigned int i = 0; i < bts.size(); ++i)
+        {
             const behaviac::string& btName = bts[i];
             Workspace::GetInstance()->Load(btName.c_str(), true);
         }
 
         this->m_behaviorTreeTasks.clear();
-        this->GetVariables()->Unload();
+        this->m_variables.Unload();
     }
 
-    IProperty* Agent::GetProperty(uint32_t propId) const {
-        const char* className = GetObjectTypeName();
-        uint32_t classId = MakeVariableId(className);
-        AgentMeta* meta = AgentMeta::GetMeta(classId);
 
-        if (meta != NULL) {
-            IProperty* prop = meta->GetProperty(propId);
+    bool Agent::IsFired(const char* eventName)
+    {
+        const CNamedEvent* pEvent = this->FindEvent(eventName);
 
-            if (prop != NULL) {
-                return prop;
+        if (pEvent)
+        {
+            return pEvent->IsFired();
+        }
+
+        return false;
+    }
+
+    void Agent::ResetEvent(Agent* pAgent, const char* eventName)
+    {
+        CStringID eventID(eventName);
+
+        if (pAgent)
+        {
+            AgentEvents_t::iterator it = pAgent->m_eventInfos.find(eventID);
+
+            if (it != pAgent->m_eventInfos.end())
+            {
+                CNamedEvent* pEvent = it->second;
+
+                pEvent->SetFired(pAgent, false, 0);
+
+                return;
+            }
+
+			int contextId = pAgent->GetContextId();
+			const CTagObjectDescriptor& meta = pAgent->GetDescriptor();
+			CNamedEvent* pEvent = findNamedEventTemplate(meta.ms_methods, eventName, contextId);
+
+			if (pEvent)
+			{
+				pEvent->SetFired(pAgent, false, 0);
+			}
+        }
+    }
+
+    //void Agent::ResetEvent(int contextId, const char* eventName)
+    //{
+    //	CStringID eventID(eventName);
+
+    //	for (AgentMetas_t::iterator it = Agent::ms_metas->begin(); it != Agent::ms_metas->end(); ++it)
+    //	{
+    //		const MetaInfo_t&  metaInfo = it->second;
+    //		const CTagObjectDescriptor* meta = metaInfo.descriptor;
+    //		CNamedEvent* pEvent = findNamedEventTemplate(meta->ms_methods, eventName, contextId);
+    //		if (pEvent)
+    //		{
+    //			pEvent->SetFired(0, false);
+    //			break;
+    //		}
+    //	}
+    //}
+
+    void Agent::ResetEvent(const char* eventName)
+    {
+        Agent::ResetEvent(this, eventName);
+    }
+
+    const CNamedEvent* Agent::FindEvent(const char* eventName, const char* className) const
+    {
+        if (className)
+        {
+            int contextId = this->GetContextId();
+            const CNamedEvent* pEvent = Agent::findEventStatic(eventName, className, contextId);
+            BEHAVIAC_ASSERT(!pEvent || pEvent->IsStatic());
+
+            return pEvent;
+
+        }
+        else
+        {
+            CStringID eventID(eventName);
+            AgentEvents_t::const_iterator it = this->m_eventInfos.find(eventID);
+
+            if (it != this->m_eventInfos.end())
+            {
+                const CNamedEvent* pEvent = it->second;
+
+                BEHAVIAC_ASSERT(!pEvent->IsStatic());
+
+                return pEvent;
             }
         }
 
-        return NULL;
+        return 0;
     }
 
-    Agent* Agent::GetInstance(const Agent* pSelf, const char* agentInstanceName) {
-        Agent* pParent = (Agent*)pSelf;
+    const CNamedEvent* Agent::findEventStatic(const char* eventName, const char* className, int context_id)
+    {
+        Context& c = Context::GetContext(context_id);
 
-		if (agentInstanceName[0] != '\0' && !StringUtils::StringEqual(agentInstanceName, "Self")) {
-            // global
-            pParent = Agent::GetInstance(agentInstanceName, pSelf ? pSelf->GetContextId() : 0);
+        return c.FindEventStatic(eventName, className);
+    }
 
-            // member
-            if (!pParent && pSelf) {
-                pParent = (Agent*)pSelf->GetVariable<Agent*>(agentInstanceName);
-            }
+    void Agent::insertEventGlobal(const char* className, CNamedEvent* pEvent, int context_id)
+    {
+        Context& c = Context::GetContext(context_id);
 
-            if (!pParent) {
-                char errorInfo[1024] = { 0 };
-                sprintf(errorInfo, "[instance] The instance \"%s\" can not be found, so please check the Agent::BindInstance(...) method has been called for this instance.\n", agentInstanceName);
+        return c.InsertEventGlobal(className, pEvent);
+    }
 
-                BEHAVIAC_ASSERT(false, errorInfo);
+    CNamedEvent* Agent::findNamedEventTemplate(const behaviac::CTagObject::MethodsContainer& methods, const char* eventName, int context_id)
+    {
+        Context& c = Context::GetContext(context_id);
 
-                LogManager::GetInstance()->Log(errorInfo);
+        return c.FindNamedEventTemplate(methods, eventName);
+    }
 
-                printf("%s", errorInfo);
-            }
+    CNamedEvent* Agent::findEvent(const char* eventName)
+    {
+        const CTagObjectDescriptor& meta = this->GetDescriptor();
+
+        int contextId = this->GetContextId();
+        CNamedEvent* pNamedMethod = Agent::findNamedEventTemplate(meta.ms_methods, eventName, contextId);
+
+        if (pNamedMethod)
+        {
+			CNamedEvent* pEvent = 0;
+			CStringID eventID(eventName);
+			AgentEvents_t::iterator it = this->m_eventInfos.find(eventID);
+			if (it == this->m_eventInfos.end())
+			{
+				pEvent = (CNamedEvent*)pNamedMethod->clone();
+				this->m_eventInfos[eventID] = pEvent;
+			}
+			else
+			{
+				pEvent = it->second;
+			}
+
+            return pEvent;
         }
 
-        return pParent;
+        return 0;
     }
 
-    Agent* Agent::GetInstance(const char* agentInstanceName, int contextId) {
+	Agent* Agent::GetInstance(const Agent* pSelf, const char* agentInstanceName)
+	{
+		Agent* pParent = (Agent*)pSelf;
+
+		if (agentInstanceName[0] != '\0' && strcmp(agentInstanceName, "Self") != 0)
+		{
+			// global
+			pParent = Agent::GetInstance(agentInstanceName, pSelf ? pSelf->GetContextId() : 0);
+
+			// member
+			if (!pParent && pSelf)
+			{
+				pParent = pSelf->GetVariable<Agent*>(agentInstanceName);
+			}
+
+			BEHAVIAC_ASSERT(pParent);
+		}
+
+		return pParent;
+	}
+
+    Agent* Agent::GetInstance(const char* agentInstanceName, int contextId)
+    {
         Context& c = Context::GetContext(contextId);
 
         return c.GetInstance(agentInstanceName);
     }
 
-    bool Agent::IsInstanceNameRegistered(const char* agentInstanceName) {
+    bool Agent::IsInstanceNameRegistered(const char* agentInstanceName)
+    {
         AgentNames_t::iterator it = Agent::Names().find(agentInstanceName);
 
-        if (it != Agent::Names().end()) {
+        if (it != Agent::Names().end())
+        {
             return true;
         }
 
         return false;
     }
 
-    const char* Agent::GetRegisteredClassName(const char* agentInstanceName) {
+    const char* Agent::GetRegisteredClassName(const char* agentInstanceName)
+    {
         AgentNames_t::iterator it = Agent::Names().find(agentInstanceName);
 
-        if (it != Agent::Names().end()) {
+        if (it != Agent::Names().end())
+        {
             AgentName_t& agentName = it->second;
 
             return agentName.classFullName_.c_str();
@@ -980,17 +1383,20 @@ namespace behaviac {
         return 0;
     }
 
-    bool Agent::BindInstance(Agent* pAgentInstance, const char* agentInstanceName, int contextId) {
+    bool Agent::BindInstance(Agent* pAgentInstance, const char* agentInstanceName, int contextId)
+    {
         Context& c = Context::GetContext(contextId);
 
-        if (!agentInstanceName) {
+        if (!agentInstanceName)
+        {
             agentInstanceName = pAgentInstance->GetClassTypeName();
         }
 
         return c.BindInstance(agentInstanceName, pAgentInstance);
     }
 
-    bool Agent::UnbindInstance(const char* agentInstanceName, int contextId) {
+    bool Agent::UnbindInstance(const char* agentInstanceName, int contextId)
+    {
         Context& c = Context::GetContext(contextId);
 
         return c.UnbindInstance(agentInstanceName);
@@ -998,48 +1404,77 @@ namespace behaviac {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //no type preceding to the namve
+    //if it looks like Agent::HP, it is not a par
+    bool IsParVar(const char* variableName)
+    {
+        const char* pSep = strchr(variableName, ':');
 
+        if (pSep && pSep[1] == ':')
+        {
+            return false;
+        }
 
-    //behaviac::CMethodBase* Agent::CreateMethod(const CStringCRC& agentClassId, const CStringCRC& methodClassId)
-    //{
-    //    AgentMetas_t::iterator it = Agent::ms_metas->find(agentClassId);
+        return true;
+    }
 
-    //    if (it != Agent::ms_metas->end())
-    //    {
-    //        MetaInfo_t& m = it->second;
-    //        const CTagObjectDescriptor* pObejctDesc = m.descriptor;
+    behaviac::CMethodBase* Agent::CreateMethod(const CStringID& agentClassId, const CStringID& methodClassId)
+    {
+        AgentMetas_t::iterator it = Agent::ms_metas->find(agentClassId);
 
-    //        const CTagObjectDescriptor::MethodsContainer& methods = pObejctDesc->ms_methods;
+        if (it != Agent::ms_metas->end())
+        {
+            MetaInfo_t& m = it->second;
+            const CTagObjectDescriptor* pObejctDesc = m.descriptor;
 
-    //        for (CTagObjectDescriptor::MethodsContainer::const_iterator it1 = methods.begin();
-    //             it1 != methods.end(); ++it1)
-    //        {
-    //            const behaviac::CMethodBase* pM = *it1;
+            const CTagObjectDescriptor::MethodsContainer& methods = pObejctDesc->ms_methods;
 
-    //            if (pM->GetID().GetID() == methodClassId)
-    //            {
-    //                return pM->clone();
-    //            }
-    //        }
-    //    }
+            for (CTagObjectDescriptor::MethodsContainer::const_iterator it1 = methods.begin();
+                 it1 != methods.end(); ++it1)
+            {
+                const behaviac::CMethodBase* pM = *it1;
 
-    //    return 0;
-    //}
+                if (pM->GetID().GetID() == methodClassId)
+                {
+                    return pM->clone();
+                }
+            }
+        }
 
+        return 0;
+    }
 
-    static const size_t kNameLength = 256;
-    static const char* ParsePropertyNames(const char* fullPropertnName, char* agentClassName) {
+    const behaviac::CMemberBase* Agent::FindMember(const char* property_name) const
+    {
+        CStringID propertyId(property_name);
+
+        const behaviac::CMemberBase* m = this->FindMember(propertyId);
+        return m;
+    }
+
+    const behaviac::CMemberBase* Agent::FindMember(const CStringID& propertyId) const
+    {
+        const CTagObjectDescriptor& obejctDesc = this->GetDescriptor();
+
+        return obejctDesc.GetMember(propertyId);
+    }
+
+	static const size_t kNameLength = 256;
+    static const char* ParsePropertyNames(const char* fullPropertnName, char* agentClassName)
+    {
+        //http://action.tenpay.com/2013/legua/?ADTAG=MSG.CUIFEI.LEGUA.TX_OK_PIC
         //test_ns::AgentActionTest::Property1
         const char* pBeginAgentClass = fullPropertnName;
 
         const char* pBeginProperty = strrchr(pBeginAgentClass, ':');
 
-        if (pBeginProperty) {
+        if (pBeginProperty)
+        {
             //skip '::'
             BEHAVIAC_ASSERT(pBeginProperty[0] == ':' && pBeginProperty[-1] == ':');
             pBeginProperty += 1;
 
-            size_t pos = pBeginProperty - 2 - pBeginAgentClass;
+			size_t pos = pBeginProperty - 2 - pBeginAgentClass;
             BEHAVIAC_ASSERT(pos < kNameLength);
 
             string_ncpy(agentClassName, pBeginAgentClass, pos);
@@ -1051,98 +1486,141 @@ namespace behaviac {
         return 0;
     }
 
-    const behaviac::IProperty* Agent::FindMemberBase(const char* propertyName) {
+    const behaviac::CMemberBase* Agent::FindMemberBase(const char* propertyName)
+    {
         char agentClassName[kNameLength];
         const char* propertyBaseName = ParsePropertyNames(propertyName, agentClassName);
 
-        if (propertyBaseName) {
-            CStringCRC agentClassId(agentClassName);
-            CStringCRC propertyId(propertyBaseName);
+        if (propertyBaseName)
+        {
+            CStringID agentClassId(agentClassName);
+            CStringID propertyId(propertyBaseName);
 
-            const behaviac::IProperty* m = FindMemberBase(agentClassId, propertyId);
+            const behaviac::CMemberBase* m = FindMemberBase(agentClassId, propertyId);
             return m;
         }
 
         return 0;
     }
 
-    const behaviac::IInstanceMember* Agent::FindMethodBase(const char* propertyName) {
+    const behaviac::CMethodBase* Agent::FindMethodBase(const char* propertyName)
+    {
         char agentClassName[kNameLength];
         const char* propertyBaseName = ParsePropertyNames(propertyName, agentClassName);
 
-        if (propertyBaseName) {
-            CStringCRC agentClassId(agentClassName);
-            CStringCRC propertyId((propertyBaseName));
+        if (propertyBaseName)
+        {
+            CStringID agentClassId(agentClassName);
+            CStringID propertyId((propertyBaseName));
 
-            const behaviac::IInstanceMember* m = FindMethodBase(agentClassId, propertyId);
+            const behaviac::CMethodBase* m = FindMethodBase(agentClassId, propertyId);
             return m;
         }
 
         return 0;
     }
 
-    const behaviac::IProperty* Agent::FindMemberBase(const CStringCRC& agentClassId, const CStringCRC& propertyId) {
-        AgentMeta* pAgentMeta = AgentMeta::GetMeta(agentClassId.GetUniqueID());
+    const behaviac::CMemberBase* Agent::FindMemberBase(const CStringID& agentClassId, const CStringID& propertyId)
+    {
+        if (Agent::ms_metas)
+        {
+            AgentMetas_t::iterator it = Agent::ms_metas->find(agentClassId);
 
-        if (pAgentMeta) {
-            IProperty* pProperty = pAgentMeta->GetMemberProperty(propertyId.GetUniqueID());
+            if (it != Agent::ms_metas->end())
+            {
+                //const behaviac::string& className = it->first;
+
+                MetaInfo_t& m = it->second;
+                const CTagObjectDescriptor* pObejctDesc = m.descriptor;
+
+                return pObejctDesc->GetMember(propertyId);
+            }//if (it != ms_metas->end())
+        }
+
+        return 0;
+    }
+
+    const behaviac::CMethodBase* Agent::FindMethodBase(const CStringID& agentClassId, const CStringID& propertyId)
+    {
+        AgentMetas_t::iterator it = Agent::ms_metas->find(agentClassId);
+
+        if (it != Agent::ms_metas->end())
+        {
+            //const behaviac::string& className = it->first;
+
+            MetaInfo_t& m = it->second;
+            const CTagObjectDescriptor* pObejctDesc = m.descriptor;
+
+            for (MethodsContainer::const_iterator it1 = pObejctDesc->ms_methods.begin();
+                 it1 != pObejctDesc->ms_methods.end(); ++it1)
+            {
+                const behaviac::CMethodBase* pMethod = *it1;
+
+                if (pMethod->GetID().GetID() == propertyId)
+                {
+                    //ParentType pt = pMethod->GetParentType();
+
+                    return pMethod;
+                }
+            }//for
+        }//if (it != ms_metas->end())
+
+        return 0;
+    }
+
+    Property* Agent::CreateProperty(const char* typeName, const char* propertyName, const char* defaultValue)
+    {
+        BEHAVIAC_UNUSED_VAR(typeName);
+
+        const behaviac::CMemberBase* pMember = Agent::FindMemberBase(propertyName);
+
+        if (pMember)
+        {
+            Property* pProperty = pMember->CreateProperty(defaultValue, false);
+
             return pProperty;
         }
 
+        //else
+        //{
+        //	const behaviac::CMethodBase* pMethod = 0;
+        //	if (propertyName && propertyName[0] != '\0')
+        //	{
+        //		pMethod = Agent::FindMethodBase(propertyName);
+        //	}
+
+        //	if (pMethod)
+        //	{
+        //		return pMethod->CreateProperty(defaultValue, true);
+        //	}
+        //}
+
         return 0;
     }
+    const CTagObjectDescriptor* Agent::GetDescriptorByName(const char* agentTypeClass)
+    {
+        CStringID agentTypeClassId(agentTypeClass);
 
-    const behaviac::IInstanceMember* Agent::FindMethodBase(const CStringCRC& agentClassId, const CStringCRC& propertyId) {
-        AgentMeta* pAgentMeta = AgentMeta::GetMeta(agentClassId.GetUniqueID());
+        AgentMetas_t::iterator it = Agent::ms_metas->find(agentTypeClassId);
 
-        if (pAgentMeta) {
-            IInstanceMember* pMethod = pAgentMeta->GetMethod(propertyId.GetUniqueID());
-            return pMethod;
+        if (it != Agent::ms_metas->end())
+        {
+            return it->second.descriptor;
         }
 
         return 0;
     }
 
-    IInstantiatedVariable* Agent::CreateProperty(const char* agentClassName, const char* propertyName, const char* defaultValue) {
-		BEHAVIAC_UNUSED_VAR(defaultValue);
-		CStringCRC agentClassId(agentClassName);
-        CStringCRC propertyId((propertyName));
-
-        const behaviac::IProperty* pProperty = Agent::FindMemberBase(agentClassId, propertyId);
-
-        if (pProperty) {
-            IInstantiatedVariable* pInstantiatedVariable = pProperty->Instantiate();
-            BEHAVIAC_ASSERT(0);
-            //pInstantiatedVariable->SetInitialValue(defaultValue);
-
-            return pInstantiatedVariable;
-        }
-
-        return 0;
-    }
-
-    //const CTagObjectDescriptor* Agent::GetDescriptorByName(const char* agentTypeClass)
-    //{
-    //    CStringCRC agentTypeClassId(agentTypeClass);
-
-    //    AgentMetas_t::iterator it = Agent::ms_metas->find(agentTypeClassId);
-
-    //    if (it != Agent::ms_metas->end())
-    //    {
-    //        return it->second.descriptor;
-    //    }
-
-    //    return 0;
-    //}
-
-    bool Agent::btsave(State_t& state) {
+    bool Agent::btsave(State_t& state)
+    {
 #if BEHAVIAC_ENABLE_PROFILING
         BEHAVIAC_PROFILE("Agent::btsave");
 #endif
         state.m_agentType = this->GetObjectTypeName();
-        this->GetVariables()->CopyTo(0, state.m_vars);
+        this->m_variables.CopyTo(0, state.m_vars);
 
-        if (this->m_currentBT) {
+        if (this->m_currentBT)
+        {
             Workspace::GetInstance()->DestroyBehaviorTreeTask(state.m_bt, this);
 
             const BehaviorNode* pNode = this->m_currentBT->GetNode();
@@ -1155,34 +1633,23 @@ namespace behaviac {
         return false;
     }
 
-    Agent* Agent::GetParentAgent(const Agent* pAgent, const char* instanceName) {
-        Agent* pParent = const_cast<Agent*>(pAgent);
-
-        if (!StringUtils::IsNullOrEmpty(instanceName) && !StringUtils::Compare(instanceName, "Self")) {
-            pParent = Agent::GetInstance(instanceName, (pParent != NULL) ? pParent->GetContextId() : 0);
-
-            //if (pAgent != NULL && pParent == NULL && !Utils.IsStaticClass(instanceName))
-            if (pAgent != NULL && pParent == NULL /*&& !Utils.IsStaticClass(instanceName)*/) { //TODO how to handle Statice Class
-                pParent = (Agent*)pAgent->GetVariable<Agent*>(instanceName);
-                BEHAVIAC_ASSERT(pParent != NULL);
-            }
-        }
-
-        return pParent;
-    }
-
-    bool Agent::btload(const State_t& state) {
+    bool Agent::btload(const State_t& state)
+    {
 #if BEHAVIAC_ENABLE_PROFILING
         BEHAVIAC_PROFILE("Agent::btload");
 #endif
-        state.m_vars.CopyTo(this, *this->m_variables);
+        state.m_vars.CopyTo(this, this->m_variables);
 
-        if (state.m_bt) {
-            if (this->m_currentBT) {
-                for (BehaviorTreeTasks_t::iterator iti = this->m_behaviorTreeTasks.begin(); iti != m_behaviorTreeTasks.end(); ++iti) {
+        if (state.m_bt)
+        {
+            if (this->m_currentBT)
+            {
+                for (BehaviorTreeTasks_t::iterator iti = this->m_behaviorTreeTasks.begin(); iti != m_behaviorTreeTasks.end(); ++iti)
+                {
                     BehaviorTreeTask* task = *iti;
 
-                    if (task == this->m_currentBT) {
+                    if (task == this->m_currentBT)
+                    {
                         Workspace::GetInstance()->DestroyBehaviorTreeTask(task, this);
 
                         this->m_behaviorTreeTasks.erase(iti);
@@ -1203,50 +1670,57 @@ namespace behaviac {
 
 #if !BEHAVIAC_RELEASE
     Agent::Agents_t* Agent::ms_agents = 0;
-    Agent::Agents_t* Agent::Agents(bool bCleanup) {
-        if (!bCleanup) {
-            if (!ms_agents) {
+    Agent::Agents_t* Agent::Agents(bool bCleanup)
+    {
+        if (!bCleanup)
+        {
+            if (!ms_agents)
+            {
                 ms_agents = BEHAVIAC_NEW Agent::Agents_t;
             }
 
             return ms_agents;
         }
 
-        if (ms_agents) {
+        if (ms_agents)
+        {
             return ms_agents;
         }
 
         return 0;
     }
 
-    Agent* Agent::GetAgent(const char* agentName) {
+    Agent* Agent::GetAgent(const char* agentName)
+    {
         Agent* pAgent = Agent::GetInstance(agentName, 0);
 
-        if (pAgent) {
+        if (pAgent)
+        {
             return pAgent;
         }
 
         Agent::Agents_t* agents = Agents(false);
         BEHAVIAC_ASSERT(agents);
-		if (agents) {
-			Agent::Agents_t::iterator it = agents->find(agentName);
+        Agent::Agents_t::iterator it = agents->find(agentName);
 
-			if (it != agents->end()) {
-				Agent* pA = it->second;
-				return pA;
-			}
-		}
+        if (it != agents->end())
+        {
+            Agent* pA = it->second;
+            return pA;
+        }
 
         return 0;
     }
 #endif//BEHAVIAC_RELEASE
 
-    void Agent::LogMessage(const char* message) {
-        int frames = behaviac::Workspace::GetInstance()->GetFrameSinceStartup();
-        BEHAVIAC_LOGINFO("[%d]%s\n", frames, message);
-    }
+	void Agent::LogMessage(const char* message)
+	{
+		int frames = behaviac::Workspace::GetInstance()->GetFrameSinceStartup();
+		BEHAVIAC_LOGMSG("[%d]%s\n", frames, message);
+	}
 
-    int Agent::VectorLength(const IList& vector) {
+    int Agent::VectorLength(const IList& vector)
+    {
         int n = vector.size();
 
         (*(IList*)&vector).release();
@@ -1254,24 +1728,28 @@ namespace behaviac {
         return n;
     }
 
-    void Agent::VectorAdd(IList& vector, const System::Object& element) {
+    void Agent::VectorAdd(IList& vector, const System::Object& element)
+    {
         vector.add(element);
         vector.release();
     }
 
-    void Agent::VectorRemove(IList& vector, const System::Object& element) {
+    void Agent::VectorRemove(IList& vector, const System::Object& element)
+    {
         vector.remove(element);
         vector.release();
     }
 
-    bool Agent::VectorContains(IList& vector, const System::Object& element) {
+    bool Agent::VectorContains(IList& vector, const System::Object& element)
+    {
         bool bOk = vector.contains(element);
         vector.release();
 
         return bOk;
     }
 
-    void Agent::VectorClear(IList& vector) {
+    void Agent::VectorClear(IList& vector)
+    {
         vector.clear();
         vector.release();
     }

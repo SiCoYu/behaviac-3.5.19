@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in
 // compliance with the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -28,7 +28,7 @@ namespace behaviac
 
         public Variables()
         {
-            this.m_variables = new Dictionary<uint, IInstantiatedVariable>();
+            this.m_variables = new Dictionary<uint,IInstantiatedVariable>();
         }
 
         public bool IsExisting(uint varId)
@@ -57,7 +57,6 @@ namespace behaviac
         {
 #if !BEHAVIAC_RELEASE
             var e = this.m_variables.Keys.GetEnumerator();
-
             while (e.MoveNext())
             {
                 uint id = e.Current;
@@ -65,7 +64,6 @@ namespace behaviac
 
                 pVar.Log(agent);
             }
-
 #endif
         }
 
@@ -74,7 +72,6 @@ namespace behaviac
             Debug.Check(!string.IsNullOrEmpty(variableName));
 
             uint varId = Utils.MakeVariableId(variableName);
-
             if (this.m_variables.ContainsKey(varId))
             {
                 this.m_variables.Remove(varId);
@@ -90,7 +87,6 @@ namespace behaviac
             target.m_variables.Clear();
 
             var e = this.m_variables.Keys.GetEnumerator();
-
             while (e.MoveNext())
             {
                 uint id = e.Current;
@@ -103,7 +99,6 @@ namespace behaviac
             if (!Object.ReferenceEquals(pAgent, null))
             {
                 e = target.m_variables.Keys.GetEnumerator();
-
                 while (e.MoveNext())
                 {
                     uint id = e.Current;
@@ -120,7 +115,6 @@ namespace behaviac
             ISerializableNode varsNode = node.newChild(variablesId);
 
             var e = this.m_variables.Values.GetEnumerator();
-
             while (e.MoveNext())
             {
                 e.Current.Save(varsNode);
@@ -260,8 +254,7 @@ namespace behaviac
 #endif
 
             AgentState newly = null;
-
-            lock (pool)
+            lock(pool)
             {
                 if (pool.Count > 0)
                 {
@@ -297,7 +290,6 @@ namespace behaviac
         private void CopyTopValueTo(AgentState newly)
         {
             var e = this.m_variables.Keys.GetEnumerator();
-
             while (e.MoveNext())
             {
                 uint id = e.Current;
@@ -339,12 +331,10 @@ namespace behaviac
             this.m_pushed = 0;
             this.m_forced = false;
 #endif
-
             if (this.state_stack != null)
             {
                 this.state_stack.Clear();
             }
-
             this.m_variables.Clear();
 
             Debug.Check(this.state_stack == null);
@@ -353,7 +343,7 @@ namespace behaviac
             this.parent.PopTop();
             this.parent = null;
 
-            lock (pool)
+            lock(pool)
             {
                 Debug.Check(!pool.Contains(this));
                 pool.Push(this);

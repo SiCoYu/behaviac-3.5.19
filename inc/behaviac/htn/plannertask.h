@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,22 +11,23 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef _BEHAVIAC_HTN_PLANNERTASK_H_
-#define _BEHAVIAC_HTN_PLANNERTASK_H_
+#ifndef BEHAVIAC_HTN_PLANNERTASK_H
+#define BEHAVIAC_HTN_PLANNERTASK_H
 #include <typeinfo>
-#include "behaviac/common/base.h"
+#include "behaviac/base/base.h"
 #include "behaviac/behaviortree/behaviortree.h"
 #include "behaviac/behaviortree/behaviortree_task.h"
 #include "behaviac/property/properties.h"
 
-#if BEHAVIAC_USE_HTN
-namespace behaviac {
+namespace behaviac
+{
     class AgentState;
-    class PlannerTask : public BehaviorTask {
+    class PlannerTask : public BehaviorTask
+    {
         typedef PlannerTask* (*TaskCreator)(BehaviorNode* node, Agent* pAgent);
 
     private:
-        typedef behaviac::map<CStringCRC, TaskCreator> PlannerTaskFactory_t;
+        typedef behaviac::map<CStringID, TaskCreator> PlannerTaskFactory_t;
         static PlannerTaskFactory_t* ms_factory;
 
         template<typename T, typename TT>
@@ -51,12 +52,13 @@ namespace behaviac {
     protected:
         virtual void Init(const BehaviorNode* node);
         virtual void copyto(BehaviorTask* target) const;
-        virtual void save(IIONode* node) const;
-        virtual void load(IIONode* node);
+        virtual void save(ISerializableNode* node) const;
+        virtual void load(ISerializableNode* node);
         virtual EBTStatus update(Agent* pAgent, EBTStatus childStatus);
     };
 
-    class PlannerTaskAction : public PlannerTask {
+    class PlannerTaskAction : public PlannerTask
+    {
         //private object[] ParamsValue { get; set; }
 
     public:
@@ -71,7 +73,8 @@ namespace behaviac {
         virtual EBTStatus update(Agent* pAgent, EBTStatus childStatus);
     };
 
-    class PlannerTaskComplex : public PlannerTask {
+    class PlannerTaskComplex : public PlannerTask
+    {
     protected:
         int								m_activeChildIndex;
         behaviac::vector<BehaviorTask*> m_children;
@@ -91,7 +94,8 @@ namespace behaviac {
         virtual EBTStatus update(Agent* pAgent, EBTStatus childStatus);
     };
 
-    class PlannerTaskSequence : public PlannerTaskComplex {
+    class PlannerTaskSequence : public PlannerTaskComplex
+    {
     public:
         PlannerTaskSequence(BehaviorNode* node, Agent* pAgent);
 
@@ -99,7 +103,8 @@ namespace behaviac {
         virtual EBTStatus update(Agent* pAgent, EBTStatus childStatus);
     };
 
-    class PlannerTaskSelector : public PlannerTaskComplex {
+    class PlannerTaskSelector : public PlannerTaskComplex
+    {
     public:
         PlannerTaskSelector(BehaviorNode* node, Agent* pAgent);
 
@@ -107,14 +112,16 @@ namespace behaviac {
         virtual EBTStatus update(Agent* pAgent, EBTStatus childStatus);
     };
 
-    class PlannerTaskParallel : public PlannerTaskComplex {
+    class PlannerTaskParallel : public PlannerTaskComplex
+    {
     public:
         PlannerTaskParallel(BehaviorNode* node, Agent* pAgent);
     protected:
         virtual EBTStatus update(Agent* pAgent, EBTStatus childStatus);
     };
 
-    class PlannerTaskLoop : public PlannerTaskComplex {
+    class PlannerTaskLoop : public PlannerTaskComplex
+    {
     public:
         PlannerTaskLoop(BehaviorNode* node, Agent* pAgent);
 
@@ -130,11 +137,12 @@ namespace behaviac {
         virtual EBTStatus update(Agent* pAgent, EBTStatus childStatus);
     };
 
-    class PlannerTaskIterator : public PlannerTaskComplex {
+    class PlannerTaskIterator : public PlannerTaskComplex
+    {
     public:
         PlannerTaskIterator(BehaviorNode* node, Agent* pAgent);
 
-        void SetIndex(int index);
+		void SetIndex(int index);
     protected:
         virtual bool onenter(Agent* pAgent);
 
@@ -142,31 +150,28 @@ namespace behaviac {
         int m_index;
     };
 
-    class PlannerTaskReference : public PlannerTaskComplex {
+    class PlannerTaskReference : public PlannerTaskComplex
+    {
     public:
         PlannerTaskReference(BehaviorNode* node, Agent* pAgent);
-
-        void SetSubTreeTask(BehaviorTreeTask* treeTask) {
-            this->m_subTree = treeTask;
-        }
 
         AgentState* currentState;
 
     protected:
-        virtual bool CheckPreconditions(const Agent* pAgent, bool bIsAlive) const;
+        virtual bool CheckPreconditions(Agent* pAgent, bool bIsAlive);
 
 #if !BEHAVIAC_RELEASE
         bool _logged;
 #endif
         BehaviorTreeTask* m_subTree;
-        BehaviorTreeTask* m_oldTreeTask;
     protected:
         virtual bool onenter(Agent* pAgent);
         virtual void onexit(Agent* pAgent, EBTStatus status);
         virtual EBTStatus update(Agent* pAgent, EBTStatus childStatus);
     };
 
-    class PlannerTaskTask : public PlannerTaskComplex {
+    class PlannerTaskTask : public PlannerTaskComplex
+    {
     public:
         PlannerTaskTask(BehaviorNode* node, Agent* pAgent);
 
@@ -177,7 +182,8 @@ namespace behaviac {
         virtual EBTStatus update(Agent* pAgent, EBTStatus childStatus);
     };
 
-    class PlannerTaskMethod : public  PlannerTaskComplex {
+    class PlannerTaskMethod : public  PlannerTaskComplex
+    {
     public:
         PlannerTaskMethod(BehaviorNode* node, Agent* pAgent);
 
@@ -185,7 +191,5 @@ namespace behaviac {
         virtual EBTStatus update(Agent* pAgent, EBTStatus childStatus);
     };
 }
-#endif//#if BEHAVIAC_USE_HTN
 
 #endif
-

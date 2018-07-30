@@ -1,12 +1,14 @@
-#ifndef _BEHAVIAC_FSM_H_
-#define _BEHAVIAC_FSM_H_
-#include "behaviac/common/base.h"
+#ifndef BEHAVIAC_FSM_H
+#define BEHAVIAC_FSM_H
+#include "behaviac/base/base.h"
 #include "behaviac/behaviortree/behaviortree.h"
 #include "behaviac/behaviortree/behaviortree_task.h"
 
-namespace behaviac {
+namespace behaviac
+{
     // ============================================================================
-    class BEHAVIAC_API FSM : public BehaviorNode {
+    class BEHAVIAC_API FSM : public BehaviorNode
+    {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(FSM, BehaviorNode);
 
@@ -16,9 +18,6 @@ namespace behaviac {
 
         void SetInitialId(int initialId);
         int GetInitialId() const;
-#if BEHAVIAC_USE_HTN
-        virtual bool decompose(BehaviorNode* node, PlannerTaskComplex* seqTask, int depth, Planner* planner);
-#endif //BEHAVIAC_USE_HTN
     protected:
         virtual void load(int version, const char* agentType, const properties_t& properties);
         virtual BehaviorTask* createTask() const;
@@ -27,7 +26,8 @@ namespace behaviac {
         int		m_initialId;
     };
 
-    class BEHAVIAC_API FSMTask : public CompositeTask {
+    class BEHAVIAC_API FSMTask : public CompositeTask
+    {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(FSMTask, CompositeTask);
 
@@ -36,8 +36,8 @@ namespace behaviac {
 
     protected:
         virtual void copyto(BehaviorTask* target) const;
-        virtual void save(IIONode* node) const;
-        virtual void load(IIONode* node);
+        virtual void save(ISerializableNode* node) const;
+        virtual void load(ISerializableNode* node);
 
         virtual bool onenter(Agent* pAgent);
         virtual void onexit(Agent* pAgent, EBTStatus s);

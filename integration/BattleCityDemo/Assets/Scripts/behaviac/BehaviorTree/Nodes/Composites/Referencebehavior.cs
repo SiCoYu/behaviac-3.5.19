@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -42,7 +42,7 @@ namespace behaviac
                     //task.Parent.InstantiatePars(this.LocalVars);
 
                     BehaviorTreeTask oldCurrentTreeTask = pAgent.ExcutingTreeTask;
-                    pAgent.ExcutingTreeTask = subTreeTask;
+                    pAgent.ExcutingTreeTask = subTreeTask; 
                     PlannerTask childTask = planner.decomposeNode(task, depth);
                     pAgent.ExcutingTreeTask = oldCurrentTreeTask;
 
@@ -92,18 +92,14 @@ namespace behaviac
 
                     //conservatively make it true
                     bool bHasEvents = true;
-
                     if (!string.IsNullOrEmpty(szTreePath))
                     {
-                        if (Config.PreloadBehaviors)
-                        {
-                            BehaviorTree behaviorTree = Workspace.Instance.LoadBehaviorTree(szTreePath);
-                            Debug.Check(behaviorTree != null);
+                        BehaviorTree behaviorTree = Workspace.Instance.LoadBehaviorTree(szTreePath);
+                        Debug.Check(behaviorTree != null);
 
-                            if (behaviorTree != null)
-                            {
-                                bHasEvents = behaviorTree.HasEvents();
-                            }
+                        if (behaviorTree != null)
+                        {
+                            bHasEvents = behaviorTree.HasEvents();
                         }
 
                         this.m_bHasEvents |= bHasEvents;
@@ -217,13 +213,11 @@ namespace behaviac
 
                 bool bOk = base.CheckPreconditions(pAgent, bIsAlive);
 #if BEHAVIAC_USE_HTN
-
                 if (!bOk)
                 {
                     this.currentState.Pop();
                     this.currentState = null;
                 }
-
 #endif//
                 return bOk;
             }
@@ -241,7 +235,6 @@ namespace behaviac
                 if (this.m_status == EBTStatus.BT_RUNNING && this.m_node.HasEvents())
                 {
                     Debug.Check(this.m_subTree != null);
-
                     if (!this.m_subTree.onevent(pAgent, eventName, eventPrams))
                     {
                         return false;
@@ -256,42 +249,31 @@ namespace behaviac
                 ReferencedBehavior pNode = this.GetNode() as ReferencedBehavior;
                 Debug.Check(pNode != null);
 
-                if (pNode != null)
+                this.m_nextStateId = -1;
+
+                //to create the task on demand
+                if (this.m_subTree == null)
                 {
-                    this.m_nextStateId = -1;
-
                     string szTreePath = pNode.GetReferencedTree(pAgent);
-
-                    //to create the task on demand
-                    if (this.m_subTree == null || szTreePath != this.m_subTree.GetName())
-                    {
-                        if (this.m_subTree != null)
-                        {
-                            Workspace.Instance.DestroyBehaviorTreeTask(this.m_subTree, pAgent);
-                        }
-
-                        this.m_subTree = Workspace.Instance.CreateBehaviorTreeTask(szTreePath);
-                        pNode.SetTaskParams(pAgent, this.m_subTree);
-                    }
-                    else if (this.m_subTree != null)
-                    {
-                        this.m_subTree.reset(pAgent);
-                    }
-
-                    pNode.SetTaskParams(pAgent, this.m_subTree);
-
-                    return true;
+                    this.m_subTree = Workspace.Instance.CreateBehaviorTreeTask(szTreePath);
+                }
+                else
+                {
+                    this.m_subTree.reset(pAgent);
                 }
 
-                return false;
+                pNode.SetTaskParams(pAgent, this.m_subTree);
+
+                return true;
             }
 
             protected override void onexit(Agent pAgent, EBTStatus s)
             {
+
 #if BEHAVIAC_USE_HTN
                 Debug.Check(this.currentState != null);
                 this.currentState.Pop();
-#endif
+#endif//
                 base.onexit(pAgent, s);
             }
 
@@ -300,37 +282,31 @@ namespace behaviac
                 ReferencedBehavior pNode = this.GetNode() as ReferencedBehavior;
                 Debug.Check(pNode != null);
 
-                if (pNode != null)
-                {
 #if !BEHAVIAC_RELEASE
-                    pAgent.m_debug_count++;
-
-                    if (pAgent.m_debug_count > 20)
-                    {
-                        Debug.LogWarning(string.Format("{0} might be in a recurrsive inter calling of trees\n", pAgent.GetName()));
-                        Debug.Check(false);
-                    }
+                pAgent.m_debug_count++;
+                if (pAgent.m_debug_count > 20)
+                {
+                    Debug.LogWarning(string.Format("{0} might be in a recurrsive inter calling of trees\n", pAgent.GetName()));
+                    Debug.Check(false);
+                }
 #endif
 
-                    EBTStatus result = this.m_subTree.exec(pAgent);
+                EBTStatus result = this.m_subTree.exec(pAgent);
 
-                    bool bTransitioned = State.UpdateTransitions(pAgent, pNode, pNode.m_transitions, ref this.m_nextStateId, result);
+                bool bTransitioned = State.UpdateTransitions(pAgent, pNode, pNode.m_transitions, ref this.m_nextStateId, result);
 
-                    if (bTransitioned)
+                if (bTransitioned)
+                {
+                    if (result == EBTStatus.BT_RUNNING)
                     {
-                        if (result == EBTStatus.BT_RUNNING)
-                        {
-                            //subtree not exited, but it will transition to other states
-                            this.m_subTree.abort(pAgent);
-                        }
-
-                        result = EBTStatus.BT_SUCCESS;
+                        //subtree not exited, but it will transition to other states
+                        this.m_subTree.abort(pAgent);
                     }
 
-                    return result;
+                    result = EBTStatus.BT_SUCCESS;
                 }
 
-                return EBTStatus.BT_INVALID;
+                return result;
             }
         }
     }

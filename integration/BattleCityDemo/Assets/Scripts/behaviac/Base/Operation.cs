@@ -1,7 +1,7 @@
-﻿/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -28,7 +28,6 @@ namespace behaviac
         {
             Type type = agent.GetType();
             string propertyName = type.FullName + property;
-
             if (_fields.ContainsKey(propertyName))
             {
                 return _fields[propertyName].GetValue(agent);
@@ -42,7 +41,6 @@ namespace behaviac
             while (type != typeof(object))
             {
                 FieldInfo field = type.GetField(property, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
-
                 if (field != null)
                 {
                     _fields[propertyName] = field;
@@ -50,7 +48,6 @@ namespace behaviac
                 }
 
                 PropertyInfo prop = type.GetProperty(property, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
-
                 if (prop != null)
                 {
                     _properties[propertyName] = prop;
@@ -59,7 +56,6 @@ namespace behaviac
 
                 type = type.BaseType;
             }
-
             Debug.Check(false, "No property can be found!");
             return null;
         }
@@ -68,7 +64,6 @@ namespace behaviac
         {
             Type type = agent.GetType();
             string propertyName = type.FullName + property;
-
             if (_fields.ContainsKey(propertyName))
             {
                 _fields[propertyName].SetValue(agent, value);
@@ -84,7 +79,6 @@ namespace behaviac
             while (type != typeof(object))
             {
                 FieldInfo field = type.GetField(property, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
-
                 if (field != null)
                 {
                     _fields[propertyName] = field;
@@ -93,7 +87,6 @@ namespace behaviac
                 }
 
                 PropertyInfo prop = type.GetProperty(property, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
-
                 if (prop != null)
                 {
                     _properties[propertyName] = prop;
@@ -103,7 +96,6 @@ namespace behaviac
 
                 type = type.BaseType;
             }
-
             Debug.Check(false, "No property can be found!");
         }
 
@@ -111,7 +103,6 @@ namespace behaviac
         {
             Type type = agent.GetType();
             string methodName = type.FullName + method;
-
             if (_methods.ContainsKey(methodName))
             {
                 return _methods[methodName].Invoke(agent, args); ;
@@ -120,7 +111,6 @@ namespace behaviac
             while (type != typeof(object))
             {
                 MethodInfo m = type.GetMethod(method, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
-
                 if (m != null)
                 {
                     _methods[methodName] = m;
@@ -129,7 +119,6 @@ namespace behaviac
 
                 type = type.BaseType;
             }
-
             Debug.Check(false, "No method can be found!");
             return null;
         }
@@ -445,35 +434,17 @@ namespace behaviac
             return OperationUtils.Compare<T>(l, r, EOperatorType.E_EQUAL);
         }
 
-        public virtual bool Equal(T lhs, T rhs)
-        {
-            return false;
-        }
+        public virtual bool Equal(T lhs, T rhs) { return false; }
 
-        public virtual bool NotEqual(T lhs, T rhs)
-        {
-            return false;
-        }
+        public virtual bool NotEqual(T lhs, T rhs) { return false; }
 
-        public virtual bool Greater(T lhs, T rhs)
-        {
-            return false;
-        }
+        public virtual bool Greater(T lhs, T rhs) { return false; }
 
-        public virtual bool GreaterEqual(T lhs, T rhs)
-        {
-            return false;
-        }
+        public virtual bool GreaterEqual(T lhs, T rhs) { return false; }
 
-        public virtual bool Less(T lhs, T rhs)
-        {
-            return false;
-        }
+        public virtual bool Less(T lhs, T rhs) { return false; }
 
-        public virtual bool LessEqual(T lhs, T rhs)
-        {
-            return false;
-        }
+        public virtual bool LessEqual(T lhs, T rhs) { return false; }
     }
 
     public class CompareValueBool : ICompareValue<bool>
@@ -1041,7 +1012,7 @@ namespace behaviac
             ms_valueComparers = null;
         }
 
-        public static void RegisterType<T, TCOMPARER>() where TCOMPARER : ICompareValue, new()
+        public static void RegisterType<T, TCOMPARER>() where TCOMPARER : ICompareValue, new() 
         {
             TCOMPARER pComparer = new TCOMPARER();
             ms_valueComparers.Add(typeof(T), pComparer);
@@ -1049,8 +1020,7 @@ namespace behaviac
 
         public static ICompareValue<T> Get<T>()
         {
-            Type type = typeof(T);
-
+            Type type = typeof (T);
             if (ms_valueComparers.ContainsKey(type))
             {
                 ICompareValue pComparer = ms_valueComparers[type];
@@ -1452,7 +1422,6 @@ namespace behaviac
         public static IComputeValue<T> Get<T>()
         {
             Type type = typeof(T);
-
             if (ms_valueComputers.ContainsKey(type))
             {
                 IComputeValue pComparer = ms_valueComputers[type];
@@ -1465,7 +1434,7 @@ namespace behaviac
         }
 
     }
-
+ 
     #endregion
 
     public static class Operator<T>
@@ -1475,51 +1444,28 @@ namespace behaviac
             IComputeValue<T> c = ComputerRegister.Get<T>();
             Debug.Check(c != null);
 
-            if (c != null)
-            {
-                return c.Add(left, right);
-            }
-
-            return default(T);
+            return c.Add(left, right);
         }
 
         public static T Subtract(T left, T right)
         {
             IComputeValue<T> c = ComputerRegister.Get<T>();
             Debug.Check(c != null);
-
-            if (c != null)
-            {
-                return c.Sub(left, right);
-            }
-
-            return default(T);
+            return c.Sub(left, right);
         }
 
         public static T Multiply(T left, T right)
         {
             IComputeValue<T> c = ComputerRegister.Get<T>();
             Debug.Check(c != null);
-
-            if (c != null)
-            {
-                return c.Mul(left, right);
-            }
-
-            return default(T);
+            return c.Mul(left, right);
         }
 
         public static T Divide(T left, T right)
         {
             IComputeValue<T> c = ComputerRegister.Get<T>();
             Debug.Check(c != null);
-
-            if (c != null)
-            {
-                return c.Div(left, right);
-            }
-
-            return default(T);
+            return c.Div(left, right);
         }
 
         private static bool EqualByMember(T left, T right)
@@ -1530,7 +1476,6 @@ namespace behaviac
 
             BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
             FieldInfo[] fields = type.GetFields(bindingFlags);
-
             for (int i = 0; i < fields.Length; ++i)
             {
                 FieldInfo field = fields[i];
@@ -1545,7 +1490,6 @@ namespace behaviac
                 if (c != null)
                 {
                     bool bEqual = c.MemberEqual(left, right, field);
-
                     if (!bEqual)
                     {
                         return false;
@@ -1569,7 +1513,6 @@ namespace behaviac
                     else
                     {
                         bool bEqual = l.Equals(r);
-
                         if (!bEqual)
                         {
                             return false;
@@ -1584,7 +1527,6 @@ namespace behaviac
         public static bool ClassEqual(T left, T right)
         {
             ICompareValue<T> c = ComparerRegister.Get<T>();
-
             if (c == null)
             {
                 //class as a struct, it might cause low performance
@@ -1598,7 +1540,6 @@ namespace behaviac
         public static bool ListEqual(T left, T right)
         {
             IList ll = (left as IList);
-
             if (ll != null)
             {
                 IList rl = (right as IList);
@@ -1613,14 +1554,11 @@ namespace behaviac
                 Type elementType = type.GetGenericArguments()[0];
                 ICompareValue c = ComparerRegister.Get(elementType);
 
-                if (c != null)
+                for (int i = 0; i < ll.Count; ++i)
                 {
-                    for (int i = 0; i < ll.Count; ++i)
+                    if (!c.ItemEqual(ll, rl, i))
                     {
-                        if (!c.ItemEqual(ll, rl, i))
-                        {
-                            return false;
-                        }
+                        return false;
                     }
                 }
             }
@@ -1631,19 +1569,14 @@ namespace behaviac
         public static bool Equal(T left, T right)
         {
             ICompareValue<T> c = ComparerRegister.Get<T>();
-
             if (c == null)
             {
                 Type type = typeof(T);
-
                 if (!type.IsValueType)
                 {
                     ICompareValue<object> co = ComparerRegister.Get<object>();
 
-                    if (co != null)
-                    {
-                        return co.Equal(left, right);
-                    }
+                    return co.Equal(left, right);
                 }
                 else
                 {
@@ -1654,12 +1587,7 @@ namespace behaviac
 
             Debug.Check(c != null);
 
-            if (c != null)
-            {
-                return c.Equal(left, right);
-            }
-
-            return false;
+            return c.Equal(left, right);
         }
 
         public static bool NotEqual(T left, T right)
@@ -1669,15 +1597,11 @@ namespace behaviac
             if (c == null)
             {
                 Type type = typeof(T);
-
                 if (!type.IsValueType)
                 {
                     ICompareValue<object> co = ComparerRegister.Get<object>();
 
-                    if (co != null)
-                    {
-                        return co.NotEqual(left, right);
-                    }
+                    return co.NotEqual(left, right);
                 }
                 else
                 {
@@ -1688,64 +1612,35 @@ namespace behaviac
 
             Debug.Check(c != null);
 
-            if (c != null)
-            {
-                return c.NotEqual(left, right);
-            }
-
-            return false;
+            return c.NotEqual(left, right);
         }
 
         public static bool GreaterThan(T left, T right)
         {
             ICompareValue<T> c = ComparerRegister.Get<T>();
             Debug.Check(c != null);
-
-            if (c != null)
-            {
-                return c.Greater(left, right);
-            }
-
-            return false;
+            return c.Greater(left, right);
         }
 
         public static bool GreaterThanOrEqual(T left, T right)
         {
             ICompareValue<T> c = ComparerRegister.Get<T>();
             Debug.Check(c != null);
-
-            if (c != null)
-            {
-                return c.GreaterEqual(left, right);
-            }
-
-            return false;
+            return c.GreaterEqual(left, right);
         }
 
         public static bool LessThan(T left, T right)
         {
             ICompareValue<T> c = ComparerRegister.Get<T>();
             Debug.Check(c != null);
-
-            if (c != null)
-            {
-                return c.Less(left, right);
-            }
-
-            return false;
+            return c.Less(left, right);
         }
 
         public static bool LessThanOrEqual(T left, T right)
         {
             ICompareValue<T> c = ComparerRegister.Get<T>();
             Debug.Check(c != null);
-
-            if (c != null)
-            {
-                return c.LessEqual(left, right);
-            }
-
-            return false;
+            return c.LessEqual(left, right);
         }
 
     }
@@ -1772,44 +1667,19 @@ namespace behaviac
         {
             switch (operatorType)
             {
-                case "Invalid":
-                    return EOperatorType.E_INVALID;
-
-                case "Assign":
-                    return EOperatorType.E_ASSIGN;
-
-                case "Assignment":
-                    return EOperatorType.E_ASSIGN;
-
-                case "Add":
-                    return EOperatorType.E_ADD;
-
-                case "Sub":
-                    return EOperatorType.E_SUB;
-
-                case "Mul":
-                    return EOperatorType.E_MUL;
-
-                case "Div":
-                    return EOperatorType.E_DIV;
-
-                case "Equal":
-                    return EOperatorType.E_EQUAL;
-
-                case "NotEqual":
-                    return EOperatorType.E_NOTEQUAL;
-
-                case "Greater":
-                    return EOperatorType.E_GREATER;
-
-                case "GreaterEqual":
-                    return EOperatorType.E_GREATEREQUAL;
-
-                case "Less":
-                    return EOperatorType.E_LESS;
-
-                case "LessEqual":
-                    return EOperatorType.E_LESSEQUAL;
+                case "Invalid":         return EOperatorType.E_INVALID;
+                case "Assign":          return EOperatorType.E_ASSIGN;
+                case "Assignment":      return EOperatorType.E_ASSIGN;
+                case "Add":             return EOperatorType.E_ADD;
+                case "Sub":             return EOperatorType.E_SUB;
+                case "Mul":             return EOperatorType.E_MUL;
+                case "Div":             return EOperatorType.E_DIV;
+                case "Equal":           return EOperatorType.E_EQUAL;
+                case "NotEqual":        return EOperatorType.E_NOTEQUAL;
+                case "Greater":         return EOperatorType.E_GREATER;
+                case "GreaterEqual":    return EOperatorType.E_GREATEREQUAL;
+                case "Less":            return EOperatorType.E_LESS;
+                case "LessEqual":       return EOperatorType.E_LESSEQUAL;
             }
 
             Debug.Check(false);
@@ -1818,42 +1688,18 @@ namespace behaviac
 
         public static bool Compare<T>(T left, T right, EOperatorType comparisonType)
         {
-            Type type = typeof(T);
-            if (!type.IsValueType)
-            {
-                bool bLeftNull = (left == null);
-                bool bRightNull = (right == null);
+            bool bLeftNull = (left == null);
+            bool bRightNull = (right == null);
 
-                if (bLeftNull && bRightNull) // both are null
-                {
-                    if (comparisonType == EOperatorType.E_EQUAL)
-                    {
-                        return true;
-                    }
-                    else if (comparisonType == EOperatorType.E_NOTEQUAL)
-                    {
-                        return false;
-                    }
-                    else
-                    {
-                        Debug.Check(false);
-                    }
-                }
-                else if (bLeftNull || bRightNull) // one is null and the other is not null
-                {
-                    if (comparisonType == EOperatorType.E_EQUAL)
-                    {
-                        return false;
-                    }
-                    else if (comparisonType == EOperatorType.E_NOTEQUAL)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        Debug.Check(false);
-                    }
-                }
+            if (bLeftNull && bRightNull)
+            {
+                // both are null
+                return true;
+            }
+            else if (bLeftNull || bRightNull)
+            {
+                // one is null and ther other one is not null
+                return false;
             }
 
             ICompareValue<T> c = ComparerRegister.Get<T>();
@@ -1862,30 +1708,23 @@ namespace behaviac
             {
                 switch (comparisonType)
                 {
-                    case EOperatorType.E_EQUAL:
-                        return Operator<T>.Equal(left, right);
-
-                    case EOperatorType.E_NOTEQUAL:
-                        return Operator<T>.NotEqual(left, right);
-
-                    case EOperatorType.E_GREATER:
-                        return Operator<T>.GreaterThan(left, right);
-
-                    case EOperatorType.E_GREATEREQUAL:
-                        return Operator<T>.GreaterThanOrEqual(left, right);
-
-                    case EOperatorType.E_LESS:
-                        return Operator<T>.LessThan(left, right);
-
-                    case EOperatorType.E_LESSEQUAL:
-                        return Operator<T>.LessThanOrEqual(left, right);
+                    case EOperatorType.E_EQUAL: return Operator<T>.Equal(left, right);
+                    case EOperatorType.E_NOTEQUAL: return Operator<T>.NotEqual(left, right);
+                    case EOperatorType.E_GREATER: return Operator<T>.GreaterThan(left, right);
+                    case EOperatorType.E_GREATEREQUAL: return Operator<T>.GreaterThanOrEqual(left, right);
+                    case EOperatorType.E_LESS: return Operator<T>.LessThan(left, right);
+                    case EOperatorType.E_LESSEQUAL: return Operator<T>.LessThanOrEqual(left, right);
                 }
             }
 
+            Type type = typeof(T);
             if (!type.IsValueType)
             {
-                bool bEqual = Object.ReferenceEquals(left, right);
+                // reference type
+                object l = (object)left;
+                object r = (object)right;
 
+                bool bEqual = Object.ReferenceEquals(l, r);
                 if (bEqual)
                 {
                     // not equal then, continue check its members below
@@ -1899,11 +1738,8 @@ namespace behaviac
 
                 switch (comparisonType)
                 {
-                    case EOperatorType.E_EQUAL:
-                        return bEqual;
-
-                    case EOperatorType.E_NOTEQUAL:
-                        return !bEqual;
+                    case EOperatorType.E_EQUAL: return bEqual;
+                    case EOperatorType.E_NOTEQUAL: return !bEqual;
                 }
             }
             else if (Utils.IsArrayType(type))
@@ -1912,26 +1748,20 @@ namespace behaviac
 
                 switch (comparisonType)
                 {
-                    case EOperatorType.E_EQUAL:
-                        return bEqual;
-
-                    case EOperatorType.E_NOTEQUAL:
-                        return !bEqual;
+                    case EOperatorType.E_EQUAL: return bEqual;
+                    case EOperatorType.E_NOTEQUAL: return !bEqual;
                 }
             }
             else if (Utils.IsEnumType(type))
             {
                 switch (comparisonType)
                 {
-                    case EOperatorType.E_EQUAL:
-                        return Operator<T>.Equal(left, right);
-
-                    case EOperatorType.E_NOTEQUAL:
-                        return Operator<T>.NotEqual(left, right);
-                        //case EOperatorType.E_GREATER: return Operator<int>.GreaterThan(iLeft, iRight);
-                        //case EOperatorType.E_GREATEREQUAL: return Operator<int>.GreaterThanOrEqual(iLeft, iRight);
-                        //case EOperatorType.E_LESS: return Operator<int>.LessThan(iLeft, iRight);
-                        //case EOperatorType.E_LESSEQUAL: return Operator<int>.LessThanOrEqual(iLeft, iRight);
+                    case EOperatorType.E_EQUAL: return Operator<T>.Equal(left, right);
+                    case EOperatorType.E_NOTEQUAL: return Operator<T>.NotEqual(left, right);
+                    //case EOperatorType.E_GREATER: return Operator<int>.GreaterThan(iLeft, iRight);
+                    //case EOperatorType.E_GREATEREQUAL: return Operator<int>.GreaterThanOrEqual(iLeft, iRight);
+                    //case EOperatorType.E_LESS: return Operator<int>.LessThan(iLeft, iRight);
+                    //case EOperatorType.E_LESSEQUAL: return Operator<int>.LessThanOrEqual(iLeft, iRight);
                 }
 
                 Debug.Check(false, "enum only supports eq or neq");
@@ -1968,17 +1798,10 @@ namespace behaviac
                 {
                     switch (computeType)
                     {
-                        case EOperatorType.E_ADD:
-                            return Operator<T>.Add(left, right);
-
-                        case EOperatorType.E_SUB:
-                            return Operator<T>.Subtract(left, right);
-
-                        case EOperatorType.E_MUL:
-                            return Operator<T>.Multiply(left, right);
-
-                        case EOperatorType.E_DIV:
-                            return Operator<T>.Divide(left, right);
+                        case EOperatorType.E_ADD: return Operator<T>.Add(left, right);
+                        case EOperatorType.E_SUB: return Operator<T>.Subtract(left, right);
+                        case EOperatorType.E_MUL: return Operator<T>.Multiply(left, right);
+                        case EOperatorType.E_DIV: return Operator<T>.Divide(left, right);
                     }
                 }
             }

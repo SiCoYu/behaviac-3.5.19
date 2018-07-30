@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -15,15 +15,18 @@
 #include "behaviac/agent/agent.h"
 
 #if BEHAVIAC_ENABLE_NETWORKD
-namespace behaviac {
+namespace behaviac
+{
     Network* Network::ms_pNetwork = 0;
 
-    Network::Network() {
+    Network::Network()
+    {
         BEHAVIAC_ASSERT(ms_pNetwork == 0);
         ms_pNetwork = this;
     }
 
-    Network::~Network() {
+    Network::~Network()
+    {
         BEHAVIAC_ASSERT(ms_pNetwork);
         ms_pNetwork = 0;
     }
@@ -46,7 +49,8 @@ namespace behaviac {
     //	}
     //}
 
-    Network* Network::GetInstance() {
+    Network* Network::GetInstance()
+    {
         Network* pNetwork = Network::ms_pNetwork;
 
         //BEHAVIAC_ASSERT(pNetwork);
@@ -54,30 +58,37 @@ namespace behaviac {
         return pNetwork;
     }
 
-    bool Network::ShouldHandle(behaviac::NetworkRole netRole) {
+    bool Network::ShouldHandle(behaviac::NetworkRole netRole)
+    {
         if ((!this->IsAuthority() && netRole == NET_ROLE_NONAUTHORITY) ||
-            (this->IsAuthority() && netRole == NET_ROLE_AUTHORITY)) {
+            (this->IsAuthority() && netRole == NET_ROLE_AUTHORITY))
+        {
             return true;
         }
 
         return false;
     }
 
-    void Network::BindToEvent(behaviac::NetworkRole netRole, const char* eventName, Agent* pAgent, behaviac::CMethodBase* pMethod) {
+    void Network::BindToEvent(behaviac::NetworkRole netRole, const char* eventName, Agent* pAgent, behaviac::CMethodBase* pMethod)
+    {
         BEHAVIAC_ASSERT(netRole != NET_ROLE_DEFAULT && !this->IsSinglePlayer());
 
-        if (this->ShouldHandle(netRole)) {
+        if (this->ShouldHandle(netRole))
+        {
             RemoteEventInstanceMethods_t::iterator it = m_remoteEventInstanceMethods.find(eventName);
 
             MethodInstance_t mi(pAgent, pMethod);
 
-            if (it == m_remoteEventInstanceMethods.end()) {
+            if (it == m_remoteEventInstanceMethods.end())
+            {
                 InstanceMethods_t a;
 
                 a.push_back(mi);
                 m_remoteEventInstanceMethods[eventName] = a;
 
-            } else {
+            }
+            else
+            {
                 InstanceMethods_t& a = m_remoteEventInstanceMethods[eventName];
 
                 a.push_back(mi);
@@ -87,26 +98,33 @@ namespace behaviac {
         }
     }
 
-    void Network::UnBindToEvent(behaviac::NetworkRole netRole, const char* eventName, Agent* pAgent) {
+    void Network::UnBindToEvent(behaviac::NetworkRole netRole, const char* eventName, Agent* pAgent)
+    {
         BEHAVIAC_ASSERT(netRole != NET_ROLE_DEFAULT && !this->IsSinglePlayer());
 
-        if (this->ShouldHandle(netRole)) {
+        if (this->ShouldHandle(netRole))
+        {
             RemoteEventInstanceMethods_t::iterator it = m_remoteEventInstanceMethods.find(eventName);
 
-            if (it != m_remoteEventInstanceMethods.end()) {
+            if (it != m_remoteEventInstanceMethods.end())
+            {
                 InstanceMethods_t& a = m_remoteEventInstanceMethods[eventName];
 
-                for (InstanceMethods_t::iterator ita = a.begin(); ita != a.end();) {
+                for (InstanceMethods_t::iterator ita = a.begin(); ita != a.end();)
+                {
                     MethodInstance_t& minfo = *ita;
 
-                    if (minfo.agent == pAgent) {
+                    if (minfo.agent == pAgent)
+                    {
                         InstanceMethods_t::iterator d = ita++;
                         a.erase(d);
 
                         this->UnSubscribeToRemoteEvent(eventName, pAgent);
                         break;
 
-                    } else {
+                    }
+                    else
+                    {
                         ++ita;
                     }
                 }
@@ -114,7 +132,8 @@ namespace behaviac {
         }
     }
 
-    void Network::tick(float deltaTime) {
+    void Network::tick(float deltaTime)
+    {
         BEHAVIAC_UNUSED_VAR(deltaTime);
     }
 }//namespace behaviac

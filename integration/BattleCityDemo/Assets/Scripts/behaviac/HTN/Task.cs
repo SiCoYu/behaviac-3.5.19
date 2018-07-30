@@ -11,10 +11,7 @@ namespace behaviac
         protected bool m_bHTN;
         public bool IsHTN
         {
-            get
-            {
-                return this.m_bHTN;
-            }
+            get { return this.m_bHTN; }
         }
 
         public int FindMethodIndex(Method method)
@@ -73,7 +70,6 @@ namespace behaviac
             for (int i = 0; i < properties.Count; ++i)
             {
                 property_t p = properties[i];
-
                 if (p.name == "Prototype")
                 {
                     this.m_task = AgentMeta.ParseMethod(p.value);
@@ -120,9 +116,9 @@ namespace behaviac
             //reset the action child as it will be checked in the update
             this.m_activeChildIndex = CompositeTask.InvalidChildIndex;
             Debug.Check(this.m_activeChildIndex == CompositeTask.InvalidChildIndex);
-#if BEHAVIAC_USE_HTN
             Task pMethodNode = (Task)(this.GetNode());
 
+#if BEHAVIAC_USE_HTN
             _planner.Init(pAgent, pMethodNode);
 #endif//
 

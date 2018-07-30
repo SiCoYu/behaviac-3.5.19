@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,14 +11,15 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef _BEHAVIAC_BEHAVIORTREE_DECORATORALWAYSSUCCESS_H_
-#define _BEHAVIAC_BEHAVIORTREE_DECORATORALWAYSSUCCESS_H_
+#ifndef BEHAVIAC_BEHAVIORTREE_DECORATORALWAYSSUCCESS_H
+#define BEHAVIAC_BEHAVIORTREE_DECORATORALWAYSSUCCESS_H
 
-#include "behaviac/common/base.h"
+#include "behaviac/base/base.h"
 #include "behaviac/behaviortree/behaviortree.h"
 #include "behaviac/behaviortree/behaviortree_task.h"
 
-namespace behaviac {
+namespace behaviac
+{
     /*! \addtogroup treeNodes Behavior Tree
     * @{
     * \addtogroup DecoratorAlwaysSuccess
@@ -27,7 +28,8 @@ namespace behaviac {
     /**
     No matter what child return. DecoratorAlwaysSuccess always return Success. it can only has one child node.
     */
-    class BEHAVIAC_API DecoratorAlwaysSuccess : public DecoratorNode {
+    class BEHAVIAC_API DecoratorAlwaysSuccess : public DecoratorNode
+    {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(DecoratorAlwaysSuccess, DecoratorNode);
 
@@ -41,17 +43,19 @@ namespace behaviac {
         virtual BehaviorTask* createTask() const;
     };
 
-    class BEHAVIAC_API DecoratorAlwaysSuccessTask : public DecoratorTask {
+    class BEHAVIAC_API DecoratorAlwaysSuccessTask : public DecoratorTask
+    {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(DecoratorAlwaysSuccessTask, DecoratorTask);
 
-        DecoratorAlwaysSuccessTask() : DecoratorTask() {
+        DecoratorAlwaysSuccessTask() : DecoratorTask()
+        {
         }
 
     protected:
         virtual void copyto(BehaviorTask* target) const;
-        virtual void save(IIONode* node) const;
-        virtual void load(IIONode* node);
+        virtual void save(ISerializableNode* node) const;
+        virtual void load(ISerializableNode* node);
 
         virtual EBTStatus decorate(EBTStatus status);
     };
@@ -59,4 +63,4 @@ namespace behaviac {
     /*! @} */
 }
 
-#endif//_BEHAVIAC_BEHAVIORTREE_DECORATORALWAYSSUCCESS_H_
+#endif//BEHAVIAC_BEHAVIORTREE_DECORATORALWAYSSUCCESS_H

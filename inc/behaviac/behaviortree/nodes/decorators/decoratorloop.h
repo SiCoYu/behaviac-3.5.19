@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,15 +11,16 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef _BEHAVIAC_BEHAVIORTREE_DECORATORLOOP_H_
-#define _BEHAVIAC_BEHAVIORTREE_DECORATORLOOP_H_
+#ifndef BEHAVIAC_BEHAVIORTREE_DECORATORLOOP_H
+#define BEHAVIAC_BEHAVIORTREE_DECORATORLOOP_H
 
-#include "behaviac/common/base.h"
+#include "behaviac/base/base.h"
 #include "behaviac/behaviortree/behaviortree.h"
 #include "behaviac/behaviortree/behaviortree_task.h"
 #include "behaviac/behaviortree/nodes/decorators/decoratorcount.h"
 
-namespace behaviac {
+namespace behaviac
+{
     /*! \addtogroup treeNodes Behavior Tree
     * @{
     * \addtogroup DecoratorLoop
@@ -30,28 +31,28 @@ namespace behaviac {
     It always return Running until inner count less equal than integer Count value. Or returns the child
     value. It always return Running when the count limit equal to -1.
     */
-    class BEHAVIAC_API DecoratorLoop : public DecoratorCount {
+    class BEHAVIAC_API DecoratorLoop : public DecoratorCount
+    {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(DecoratorLoop, DecoratorCount);
 
         DecoratorLoop();
         virtual ~DecoratorLoop();
-#if BEHAVIAC_USE_HTN
         virtual bool decompose(BehaviorNode* node, PlannerTaskComplex* seqTask, int depth, Planner* planner);
-#endif //BEHAVIAC_USE_HTN
         virtual void load(int version, const char* agentType, const properties_t& properties);
     protected:
         virtual bool IsValid(Agent* pAgent, BehaviorTask* pTask) const;
     private:
         virtual BehaviorTask* createTask() const;
-    protected:
-        bool m_bDoneWithinFrame;
+	protected:
+		bool m_bDoneWithinFrame;
 
-        friend class DecoratorLoopTask;
+		friend class DecoratorLoopTask;
     };
 
     ///Returns BT_FAILURE for the specified number of iterations, then returns BT_SUCCESS after that
-    class BEHAVIAC_API DecoratorLoopTask : public DecoratorCountTask {
+    class BEHAVIAC_API DecoratorLoopTask : public DecoratorCountTask
+    {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(DecoratorLoopTask, DecoratorCountTask);
 
@@ -60,14 +61,14 @@ namespace behaviac {
 
     protected:
         virtual void copyto(BehaviorTask* target) const;
-        virtual void save(IIONode* node) const;
-        virtual void load(IIONode* node);
+        virtual void save(ISerializableNode* node) const;
+        virtual void load(ISerializableNode* node);
 
-        virtual EBTStatus update(Agent* pAgent, EBTStatus childStatus);
+		virtual EBTStatus update(Agent* pAgent, EBTStatus childStatus);
         virtual EBTStatus decorate(EBTStatus status);
     };
     /*! @} */
     /*! @} */
 }
 
-#endif//_BEHAVIAC_BEHAVIORTREE_DECORATORLOOP_H_
+#endif//BEHAVIAC_BEHAVIORTREE_DECORATORLOOP_H

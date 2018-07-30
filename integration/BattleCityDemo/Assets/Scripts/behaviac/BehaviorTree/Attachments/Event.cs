@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -31,7 +31,6 @@ namespace behaviac
             for (int i = 0; i < properties.Count; ++i)
             {
                 property_t p = properties[i];
-
                 if (p.name == "Task")
                 {
                     this.m_event = AgentMeta.ParseMethod(p.value, ref this.m_eventName);
@@ -39,12 +38,6 @@ namespace behaviac
                 else if (p.name == "ReferenceFilename")
                 {
                     this.m_referencedBehaviorPath = p.value;
-
-                    if (Config.PreloadBehaviors)
-                    {
-                        BehaviorTree behaviorTree = Workspace.Instance.LoadBehaviorTree(this.m_referencedBehaviorPath);
-                        Debug.Check(behaviorTree != null);
-                    }
                 }
                 else if (p.name == "TriggeredOnce")
                 {
@@ -87,14 +80,14 @@ namespace behaviac
         {
             if (!string.IsNullOrEmpty(this.m_referencedBehaviorPath))
             {
-                if (!System.Object.ReferenceEquals(pAgent, null))
+                if (pAgent != null)
                 {
                     TriggerMode tm = this.GetTriggerMode();
 
                     pAgent.bteventtree(pAgent, this.m_referencedBehaviorPath, tm);
 
-                    Debug.Check(pAgent.CurrentTreeTask != null);
-                    pAgent.CurrentTreeTask.AddVariables(eventParams);
+                    Debug.Check(pAgent.CurrentBT != null);
+                    pAgent.CurrentBT.AddVariables(eventParams);
 
                     pAgent.btexec();
                 }

@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,14 +11,15 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef _BEHAVIAC_BEHAVIORTREE_SELECTORPROBABILITY_H_
-#define _BEHAVIAC_BEHAVIORTREE_SELECTORPROBABILITY_H_
+#ifndef BEHAVIAC_BEHAVIORTREE_SELECTORPROBABILITY_H
+#define BEHAVIAC_BEHAVIORTREE_SELECTORPROBABILITY_H
 
-#include "behaviac/common/base.h"
+#include "behaviac/base/base.h"
 #include "behaviac/behaviortree/behaviortree.h"
 #include "behaviac/behaviortree/behaviortree_task.h"
 
-namespace behaviac {
+namespace behaviac
+{
     /*! \addtogroup treeNodes Behavior Tree
     * @{
     * \addtogroup SelectorProbability
@@ -28,7 +29,8 @@ namespace behaviac {
     /**
     Choose a child to execute based on the probability have set. then return the child execute result.
     */
-    class BEHAVIAC_API SelectorProbability : public BehaviorNode {
+    class BEHAVIAC_API SelectorProbability : public BehaviorNode
+    {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(SelectorProbability, BehaviorNode);
 
@@ -44,7 +46,7 @@ namespace behaviac {
         virtual BehaviorTask* createTask() const;
 
     protected:
-        behaviac::IInstanceMember*		m_method;
+        behaviac::CMethodBase*		m_method;
 
         friend class SelectorProbabilityTask;
     };
@@ -55,7 +57,8 @@ namespace behaviac {
     If another child with a weight of eight were added, the previous children would have a 10% chance of being executed, and the new child would have an 80% chance of being executed.
     This weight system is intended to facilitate the fine-tuning of behaviors.
     */
-    class BEHAVIAC_API SelectorProbabilityTask : public CompositeTask {
+    class BEHAVIAC_API SelectorProbabilityTask : public CompositeTask
+    {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(SelectorProbabilityTask, CompositeTask);
 
@@ -64,8 +67,8 @@ namespace behaviac {
 
     protected:
         virtual void copyto(BehaviorTask* target) const;
-        virtual void save(IIONode* node) const;
-        virtual void load(IIONode* node);
+        virtual void save(ISerializableNode* node) const;
+        virtual void load(ISerializableNode* node);
 
         virtual bool onenter(Agent* pAgent);
         virtual void onexit(Agent* pAgent, EBTStatus s);
@@ -78,4 +81,4 @@ namespace behaviac {
     /*! @} */
 }//namespace behaviac
 
-#endif//_BEHAVIAC_BEHAVIORTREE_SELECTORPROBABILITY_H_
+#endif//BEHAVIAC_BEHAVIORTREE_SELECTORPROBABILITY_H

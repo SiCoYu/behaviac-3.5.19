@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,19 +11,21 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef _BEHAVIAC_BEHAVIORTREE_CONDITIONBASE_H_
-#define _BEHAVIAC_BEHAVIORTREE_CONDITIONBASE_H_
+#ifndef BEHAVIAC_BEHAVIORTREE_CONDITIONBASE_H
+#define BEHAVIAC_BEHAVIORTREE_CONDITIONBASE_H
 
-#include "behaviac/common/base.h"
+#include "behaviac/base/base.h"
 #include "behaviac/behaviortree/behaviortree.h"
 #include "behaviac/behaviortree/behaviortree_task.h"
 
-namespace behaviac {
+namespace behaviac
+{
     /*! \addtogroup treeNodes Behavior Tree
     * @{
     * \addtogroup ConditionBase
     * @{ */
-    class BEHAVIAC_API ConditionBase : public BehaviorNode {
+    class BEHAVIAC_API ConditionBase : public BehaviorNode
+    {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(ConditionBase, BehaviorNode);
         ConditionBase();
@@ -34,7 +36,8 @@ namespace behaviac {
     };
 
     // ============================================================================
-    class BEHAVIAC_API ConditionBaseTask : public LeafTask {
+    class BEHAVIAC_API ConditionBaseTask : public LeafTask
+    {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(ConditionBaseTask, LeafTask);
 
@@ -49,4 +52,4 @@ namespace behaviac {
     /*! @} */
 }
 
-#endif//_BEHAVIAC_BEHAVIORTREE_CONDITIONBASE_H_
+#endif//BEHAVIAC_BEHAVIORTREE_CONDITIONBASE_H

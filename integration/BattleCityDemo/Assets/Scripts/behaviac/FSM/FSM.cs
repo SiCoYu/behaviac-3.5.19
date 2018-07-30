@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -33,7 +33,6 @@ namespace behaviac
             for (int i = 0; i < properties.Count; ++i)
             {
                 property_t p = properties[i];
-
                 if (p.name == "initialid")
                 {
                     this.m_initialid = System.Convert.ToInt32(p.value);
@@ -54,14 +53,8 @@ namespace behaviac
         private int m_initialid = -1;
         public int InitialId
         {
-            get
-            {
-                return this.m_initialid;
-            }
-            set
-            {
-                this.m_initialid = value;
-            }
+            get { return this.m_initialid; }
+            set { this.m_initialid = value; }
         }
 
         protected override BehaviorTask createTask()
@@ -114,8 +107,8 @@ namespace behaviac
                 Debug.Check(this.m_currentNodeId != -1);
 
 #if !BEHAVIAC_RELEASE
-                int kMaxCount = 10;
-                Dictionary<int, int> state_update_count = new Dictionary<int, int>();
+		        int kMaxCount = 10;
+		        Dictionary<int, int> state_update_count = new Dictionary<int,int>();
 #endif//#if !BEHAVIAC_RELEASE
 
                 EBTStatus status = childStatus;
@@ -123,25 +116,20 @@ namespace behaviac
 
                 while (bLoop)
                 {
-                    int nextStateId = -1;
                     BehaviorTask currentState = this.GetChildById(this.m_currentNodeId);
+                    currentState.exec(pAgent);
 
-                    if (currentState != null)
+                    if (currentState is State.StateTask)
                     {
-                        currentState.exec(pAgent);
+                        State.StateTask pStateTask = (State.StateTask)currentState;
 
-                        if (currentState is State.StateTask)
+                        if (pStateTask.IsEndState)
                         {
-                            State.StateTask pStateTask = (State.StateTask)currentState;
-
-                            if (pStateTask != null && pStateTask.IsEndState)
-                            {
-                                return EBTStatus.BT_SUCCESS;
-                            }
+                            return EBTStatus.BT_SUCCESS;
                         }
-
-                        nextStateId = currentState.GetNextStateId();
                     }
+
+                    int nextStateId = currentState.GetNextStateId();
 
                     if (nextStateId < 0)
                     {
@@ -151,7 +139,6 @@ namespace behaviac
                     else
                     {
 #if !BEHAVIAC_RELEASE
-
                         if (state_update_count.ContainsKey(this.m_currentNodeId))
                         {
                             state_update_count[this.m_currentNodeId]++;
@@ -167,7 +154,6 @@ namespace behaviac
                             Debug.LogError(string.Format("{0} might be updating an FSM('{1}') endlessly, possibly a dead loop, please redesign it!\n", pAgent.GetName(), treeName));
                             Debug.Check(false);
                         }
-
 #endif
 
                         //if transitioned, go on next state

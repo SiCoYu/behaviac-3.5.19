@@ -90,7 +90,7 @@
                 <property Opr="const int 0" />
               </node>
               <node class="Action" id="22">
-                <property Method="Self.GameLevelCommon::spawnGameActor1(&quot;Tank_Agressive&quot;,{r=0;g=1;b=0;a=1;},int Self.GameLevelCommon::parT_PlayerID)" />
+                <property Method="Self.GameLevelCommon::spawnGameActor1(&quot;Tank_Agressive&quot;,{a=1;b=0;g=1;r=0;},int Self.GameLevelCommon::parT_PlayerID)" />
                 <property ResultOption="BT_SUCCESS" />
               </node>
               <node class="Compute" id="38">

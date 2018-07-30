@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in
 // compliance with the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -15,13 +15,6 @@
 #if !BEHAVIAC_RELEASE
 #define BEHAVIAC_DEBUG
 #endif
-
-// please define BEHAVIAC_NOT_USE_UNITY in your project file if you are not using unity
-#if !BEHAVIAC_NOT_USE_UNITY
-// if you have compiling errors complaining the following using 'UnityEngine',
-//usually, you need to define BEHAVIAC_NOT_USE_UNITY in your project file
-using UnityEngine;
-#endif//!BEHAVIAC_NOT_USE_UNITY
 
 using System;
 using System.Collections;
@@ -282,7 +275,7 @@ namespace behaviac
         protected System.Reflection.FieldInfo field_;
 
         public CFieldInfo(System.Reflection.FieldInfo f, behaviac.MemberMetaInfoAttribute a)
-        : base(f.Name, a)
+            : base(f.Name, a)
         {
             this.field_ = f;
         }
@@ -346,7 +339,7 @@ namespace behaviac
         }
 
         public CProperyInfo(System.Reflection.PropertyInfo p, behaviac.MemberMetaInfoAttribute a)
-        : base(p.Name, a)
+            : base(p.Name, a)
         {
             this.property_ = p;
         }
@@ -369,23 +362,13 @@ namespace behaviac
             if (this.ISSTATIC())
             {
                 var getMethod = getGetMethod(this.property_);
-
-                if (getMethod != null)
-                {
-                    return getMethod.Invoke(null, null);
-                }
+                return getMethod.Invoke(null, null);
             }
             else
             {
                 var getMethod = getGetMethod(this.property_);
-
-                if (getMethod != null)
-                {
-                    return getMethod.Invoke(agentFrom, null);
-                }
+                return getMethod.Invoke(agentFrom, null);
             }
-
-            return null;
         }
 
         public override void Set(object objectFrom, object v)
@@ -466,21 +449,7 @@ namespace behaviac
                 if (pAgent != null && pParent == null && !Utils.IsStaticClass(instanceName))
                 {
                     pParent = pAgent.GetVariable<Agent>(instanceName);
-
-                    if (pParent == null)
-                    {
-                        string errorInfo = string.Format("[instance] The instance \"{0}\" can not be found, so please check the Agent.BindInstance(...) method has been called for this instance.\n", instanceName);
-
-                        Debug.Check(false, errorInfo);
-
-                        LogManager.Instance.Log(errorInfo);
-
-#if !BEHAVIAC_NOT_USE_UNITY
-                        UnityEngine.Debug.LogError(errorInfo);
-#else
-                        Console.WriteLine(errorInfo);
-#endif
-                    }
+                    Debug.Check(pParent != null);
                 }
             }
 
@@ -988,7 +957,7 @@ namespace behaviac
 
         public static bool IsGameObjectType(Type type)
         {
-#if !BEHAVIAC_NOT_USE_UNITY
+#if !BEHAVIAC_CS_ONLY
             return (type == typeof(UnityEngine.GameObject) || type.IsSubclassOf(typeof(UnityEngine.GameObject)));
 #else
             return false;
@@ -1055,7 +1024,6 @@ namespace behaviac
                 if (bIsStruct)
                 {
                     FieldInfo[] fields = type.GetFields(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
-
                     for (int i = 0; i < fields.Length; ++i)
                     {
                         FieldInfo f = fields[i];
@@ -1073,7 +1041,7 @@ namespace behaviac
                 }
             }
 
-            bool bIsEqual = System.Object.Equals(l, r);
+            bool bIsEqual = Object.Equals(l, r);
 
             return bIsEqual;
         }
@@ -1239,43 +1207,41 @@ namespace behaviac
             }
         }
 
-        //[Conditional("BEHAVIAC_DEBUG")]
+        [Conditional("BEHAVIAC_DEBUG")]
         [Conditional("UNITY_EDITOR")]
         public static void Log(string message)
         {
-#if !BEHAVIAC_NOT_USE_UNITY
+#if !BEHAVIAC_CS_ONLY
             UnityEngine.Debug.Log(message);
 #else
             Console.WriteLine(message);
 #endif
         }
 
-        //[Conditional("UNITY_EDITOR")]
+        [Conditional("UNITY_EDITOR")]
         public static void LogWarning(string message)
         {
-#if !BEHAVIAC_NOT_USE_UNITY
+#if !BEHAVIAC_CS_ONLY
             UnityEngine.Debug.LogWarning(message);
 #else
             Console.WriteLine(message);
 #endif
         }
 
-        //[Conditional("UNITY_EDITOR")]
+        [Conditional("UNITY_EDITOR")]
         public static void LogError(string message)
         {
-            LogManager.Instance.Flush(null);
-#if !BEHAVIAC_NOT_USE_UNITY
+#if !BEHAVIAC_CS_ONLY
             UnityEngine.Debug.LogError(message);
 #else
             Console.WriteLine(message);
 #endif
         }
 
-        //[Conditional("UNITY_EDITOR")]
+        [Conditional("UNITY_EDITOR")]
         public static void LogError(Exception ex)
         {
-            LogManager.Instance.Flush(null);
-#if !BEHAVIAC_NOT_USE_UNITY
+#if !BEHAVIAC_CS_ONLY
             UnityEngine.Debug.LogError(ex.Message);
 #else
             Console.WriteLine(ex.Message);
@@ -1288,9 +1254,8 @@ namespace behaviac
         {
             LogError(msg);
 
-#if !BEHAVIAC_NOT_USE_UNITY
+#if !BEHAVIAC_CS_ONLY
             UnityEngine.Debug.Break();
-            //System.Diagnostics.Debug.Assert(false);
 #else
             //throw new Exception();
             System.Diagnostics.Debug.Assert(false);
@@ -1319,63 +1284,61 @@ namespace behaviac
 
     static public class StringUtils
     {
-        //it returns true if 'str' starts with a count followed by ':'
-        //3:{....}
-        private static bool IsArrayString(string str, int posStart, ref int posEnd)
-        {
-            //begin of the count of an array?
-            //int posStartOld = posStart;
+        		//it returns true if 'str' starts with a count followed by ':'
+		//3:{....}
+		private static bool IsArrayString(string str, int posStart, ref int posEnd)
+		{
+			//begin of the count of an array?
+			int posStartOld = posStart;
 
-            bool bIsDigit = false;
+			bool bIsDigit = false;
 
-            int strLen = (int)str.Length;
+			int strLen = (int)str.Length;
+			while (posStart < strLen)
+			{
+				char c = str[posStart++];
 
-            while (posStart < strLen)
-            {
-                char c = str[posStart++];
+				if (char.IsDigit(c))
+				{
+					bIsDigit = true;
+				}
+				else if (c == ':' && bIsDigit)
+				{
+					//transit_points = 3:{coordX = 0; coordY = 0; } | {coordX = 0; coordY = 0; } | {coordX = 0; coordY = 0; };
+					//skip array item which is possible a struct
+					int depth = 0;
+					for (int posStart2 = posStart; posStart2 < strLen; posStart2++)
+					{
+						char c1 = str[posStart2];
 
-                if (char.IsDigit(c))
-                {
-                    bIsDigit = true;
-                }
-                else if (c == ':' && bIsDigit)
-                {
-                    //transit_points = 3:{coordX = 0; coordY = 0; } | {coordX = 0; coordY = 0; } | {coordX = 0; coordY = 0; };
-                    //skip array item which is possible a struct
-                    int depth = 0;
-
-                    for (int posStart2 = posStart; posStart2 < strLen; posStart2++)
-                    {
-                        char c1 = str[posStart2];
-
-                        if (c1 == ';' && depth == 0)
-                        {
-                            //the last ';'
-                            posEnd = posStart2;
-                            break;
-                        }
-                        else if (c1 == '{')
-                        {
-                            Debug.Check(depth < 10);
-                            depth++;
-                        }
-                        else if (c1 == '}')
-                        {
+						if (c1 == ';' && depth == 0)
+						{
+							//the last ';'
+							posEnd = posStart2;
+							break;
+						}
+						else if (c1 == '{')
+						{
+							Debug.Check(depth < 10);
+							depth++;
+						}
+						else if (c1 == '}')
+						{
                             Debug.Check(depth > 0);
-                            depth--;
-                        }
-                    }
+							depth--;
+						}
+					}
+					
+					return true;
+				}
+				else
+				{
+					break;
+				}
+			}
 
-                    return true;
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            return false;
-        }
+			return false;
+		}
 
         ///the first char is '{', to return the paired '}'
         private static int SkipPairedBrackets(string src, int indexBracketBegin)
@@ -1404,81 +1367,6 @@ namespace behaviac
             }
 
             return -1;
-        }
-
-        public static List<string> SplitTokensForStruct(string src)
-        {
-            List<string> ret = new List<string>();
-
-            if (string.IsNullOrEmpty(src))
-            {
-                return ret;
-            }
-
-            //{color=0;id=;type={bLive=false;name=0;weight=0;};}
-            //the first char is '{'
-            //the last char is '}'
-            int posCloseBrackets = SkipPairedBrackets(src, 0);
-            Debug.Check(posCloseBrackets != -1);
-
-            //{color=0;id=;type={bLive=false;name=0;weight=0;};}
-            //{color=0;id=;type={bLive=false;name=0;weight=0;};transit_points=3:{coordX=0;coordY=0;}|{coordX=0;coordY=0;}|{coordX=0;coordY=0;};}
-            int posBegin = 1;
-            int posEnd = src.IndexOf(';', posBegin);
-
-            while (posEnd != -1)
-            {
-                Debug.Check(src[posEnd] == ';');
-
-                //the last one might be empty
-                if (posEnd > posBegin)
-                {
-                    int posEqual = src.IndexOf('=', posBegin);
-                    Debug.Check(posEqual > posBegin);
-
-                    int length = posEqual - posBegin;
-                    string memmberName = src.Substring(posBegin, length);
-                    string memberValueStr;
-                    char c = src[posEqual + 1];
-
-                    if (c != '{')
-                    {
-                        length = posEnd - posEqual - 1;
-
-                        //to check if it is an array
-                        IsArrayString(src, posEqual + 1, ref posEnd);
-
-                        length = posEnd - posEqual - 1;
-                        memberValueStr = src.Substring(posEqual + 1, length);
-                    }
-                    else
-                    {
-                        int pStructBegin = 0;
-                        pStructBegin += posEqual + 1;
-                        int posCloseBrackets_ = SkipPairedBrackets(src, pStructBegin);
-                        length = posCloseBrackets_ - pStructBegin + 1;
-
-                        memberValueStr = src.Substring(posEqual + 1, length);
-
-                        posEnd = posEqual + 1 + length;
-                    }
-
-                    ret.Add(memberValueStr);
-                }
-
-                //skip ';'
-                posBegin = posEnd + 1;
-
-                //{color=0;id=;type={bLive=false;name=0;weight=0;};transit_points=3:{coordX=0;coordY=0;}|{coordX=0;coordY=0;}|{coordX=0;coordY=0;};}
-                posEnd = src.IndexOf(';', posBegin);
-
-                if (posEnd > posCloseBrackets)
-                {
-                    break;
-                }
-            }
-
-            return ret;
         }
 
         private static object FromStringStruct(Type type, string src)
@@ -1533,10 +1421,16 @@ namespace behaviac
                         length = posEnd - posEqual - 1;
 
                         //to check if it is an array
-                        IsArrayString(src, posEqual + 1, ref posEnd);
-
-                        length = posEnd - posEqual - 1;
-                        memberValueStr = src.Substring(posEqual + 1, length);
+                        if (IsArrayString(src, posEqual + 1, ref posEnd))
+                        {
+                            length = posEnd - posEqual - 1;
+                            memberValueStr = src.Substring(posEqual + 1, length);
+                        }
+                        else
+                        {
+                            length = posEnd - posEqual - 1;
+                            memberValueStr = src.Substring(posEqual + 1, length);
+                        }
                     }
                     else
                     {
@@ -1554,12 +1448,8 @@ namespace behaviac
                     {
                         FieldInfo memberType = structMembers[memmberName];
                         Debug.Check(memberType != null);
-
-                        if (memberType != null)
-                        {
-                            object memberValue = FromString(memberType.FieldType, memberValueStr, false);
-                            memberType.SetValue(objValue, memberValue);
-                        }
+                        object memberValue = FromString(memberType.FieldType, memberValueStr, false);
+                        memberType.SetValue(objValue, memberValue);
                     }
                 }
 
@@ -1737,19 +1627,14 @@ namespace behaviac
                     else
                     {
                         valueStr = "{";
-                        //FieldInfo[] fields = type.GetFields(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-                        FieldInfo[] fields = type.GetFields(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+                        FieldInfo[] fields = type.GetFields(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
 
                         for (int i = 0; i < fields.Length; ++i)
                         {
                             FieldInfo f = fields[i];
-
-                            if (!f.IsLiteral && !f.IsInitOnly)
-                            {
-                                object m = f.GetValue(value);
-                                string mStr = StringUtils.ToString(m);
-                                valueStr += string.Format("{0}={1};", f.Name, mStr);
-                            }
+                            object m = f.GetValue(value);
+                            string mStr = StringUtils.ToString(m);
+                            valueStr += string.Format("{0}={1};", f.Name, mStr);
                         }
 
                         valueStr += "}";
@@ -1793,29 +1678,13 @@ namespace behaviac
             return -1;
         }
 
-        public static string RemoveQuot(string str)
-        {
-            const string kQuotStr = "&quot;";
-            string ret = str;
-
-            if (ret.StartsWith(kQuotStr))
-            {
-                //Debug.Check(ret.EndsWith(kQuotStr));
-                ret = ret.Replace(kQuotStr, "\"");
-            }
-
-            return ret;
-        }
-
-        public static List<string> SplitTokens(ref string str)
+        public static List<string> SplitTokens(string str)
         {
             List<string> ret = new List<string>();
 
             // "const string \"test string\""
             // "const int 10"
             // "int Self.AgentArrayAccessTest::ListInts[int Self.AgentArrayAccessTest::l_index]"
-
-            str = RemoveQuot(str);
 
             if (str.StartsWith("\"") && str.EndsWith("\""))
             {
@@ -1828,13 +1697,7 @@ namespace behaviac
             {
                 ret.Add("const");
                 ret.Add("string");
-
-                string strValue = str.Substring(13);
-                strValue = RemoveQuot(strValue);
-
-                ret.Add(strValue);
-
-                str = "const string " + strValue;
+                ret.Add(str.Substring(13));
 
                 return ret;
             }

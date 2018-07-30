@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,14 +11,15 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef _BEHAVIAC_BEHAVIORTREE_COMPOSITESTOCHASTIC_H_
-#define _BEHAVIAC_BEHAVIORTREE_COMPOSITESTOCHASTIC_H_
+#ifndef BEHAVIAC_BEHAVIORTREE_COMPOSITESTOCHASTIC_H
+#define BEHAVIAC_BEHAVIORTREE_COMPOSITESTOCHASTIC_H
 
-#include "behaviac/common/base.h"
+#include "behaviac/base/base.h"
 #include "behaviac/behaviortree/behaviortree.h"
 #include "behaviac/behaviortree/behaviortree_task.h"
 
-namespace behaviac {
+namespace behaviac
+{
     /*! \addtogroup treeNodes Behavior Tree
     * @{
     * \addtogroup CompositeStochastic
@@ -27,7 +28,8 @@ namespace behaviac {
     /**
     Base class of Stochastic Nodes
     */
-    class BEHAVIAC_API CompositeStochastic : public BehaviorNode {
+    class BEHAVIAC_API CompositeStochastic : public BehaviorNode
+    {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(CompositeStochastic, BehaviorNode);
 
@@ -38,12 +40,13 @@ namespace behaviac {
     protected:
         virtual bool IsValid(Agent* pAgent, BehaviorTask* pTask) const;
 
-        behaviac::IInstanceMember*				m_method;
+        behaviac::CMethodBase*				m_method;
 
         friend class CompositeStochasticTask;
     };
 
-    class BEHAVIAC_API CompositeStochasticTask : public CompositeTask {
+    class BEHAVIAC_API CompositeStochasticTask : public CompositeTask
+    {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(CompositeStochasticTask, CompositeTask);
         CompositeStochasticTask();
@@ -51,8 +54,8 @@ namespace behaviac {
 
     protected:
         virtual void copyto(BehaviorTask* target) const;
-        virtual void save(IIONode* node) const;
-        virtual void load(IIONode* node);
+        virtual void save(ISerializableNode* node) const;
+        virtual void load(ISerializableNode* node);
 
         virtual bool onenter(Agent* pAgent);
         virtual void onexit(Agent* pAgent, EBTStatus s);
@@ -67,4 +70,4 @@ namespace behaviac {
     /*! @} */
 }
 
-#endif//_BEHAVIAC_BEHAVIORTREE_COMPOSITESTOCHASTIC_H_
+#endif//BEHAVIAC_BEHAVIORTREE_COMPOSITESTOCHASTIC_H

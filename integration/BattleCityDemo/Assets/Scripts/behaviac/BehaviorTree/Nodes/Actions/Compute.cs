@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,7 +11,6 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-using System;
 using System.Collections.Generic;
 
 namespace behaviac
@@ -25,7 +24,6 @@ namespace behaviac
             for (int i = 0; i < properties.Count; ++i)
             {
                 property_t p = properties[i];
-
                 if (p.name == "Opl")
                 {
                     this.m_opl = AgentMeta.ParseProperty(p.value);
@@ -119,37 +117,6 @@ namespace behaviac
 
                 Debug.Check(this.GetNode() is Compute);
                 Compute pComputeNode = (Compute)(this.GetNode());
-
-#if !BEHAVIAC_RELEASE
-
-                // debug code only
-                if (pComputeNode.m_operator == EOperatorType.E_DIV)
-                {
-                    object v = pComputeNode.m_opr2.GetValueObject(pAgent);
-
-                    float f = Convert.ToSingle(v);
-
-                    if (Math.Abs(f) < 0.00001f)
-                    {
-                        Debug.LogError(string.Format("Compute {0}: right is 0", this.m_id));
-                    }
-
-                    double d = Convert.ToDouble(v);
-
-                    if (Math.Abs(d) < 0.00001)
-                    {
-                        Debug.LogError(string.Format("Compute {0}: right is 0", this.m_id));
-                    }
-
-                    int n = Convert.ToInt32(v);
-
-                    if (n == 0)
-                    {
-                        Debug.LogError(string.Format("Compute {0} has right is 0", this.m_id));
-                    }
-                }
-
-#endif
 
                 if (pComputeNode.m_opl != null)
                 {

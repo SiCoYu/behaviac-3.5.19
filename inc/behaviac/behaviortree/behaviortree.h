@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,20 +11,20 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef _BEHAVIAC_BEHAVIORTREE_NODE_H_
-#define _BEHAVIAC_BEHAVIORTREE_NODE_H_
+#ifndef BEHAVIAC_BEHAVIORTREE_NODE_H
+#define BEHAVIAC_BEHAVIORTREE_NODE_H
 
-#include "behaviac/common/base.h"
+#include "behaviac/base/base.h"
 
-#include "behaviac/common/rttibase.h"
-#include "behaviac/common/object/tagobject.h"
-#include "behaviac/common/factory.h"
+#include "behaviac/base/dynamictype.h"
+#include "behaviac/base/object/tagobject.h"
+#include "behaviac/base/core/factory.h"
 
-#include "behaviac/common/workspace.h"
+#include "behaviac/base/workspace.h"
 
 #include "behaviac/property/property.h"
 
-#include "behaviac/common/rapidxml/rapidxml.hpp"
+#include "behaviac/base/core/rapidxml/rapidxml.hpp"
 
 /*! \mainpage Behaviac Help Home Page
 \section secOverview Overview
@@ -52,9 +52,11 @@ the root node is the result of the entire tree execution Running indicating that
 Success/Failure indicating a complete run and its result.
 */
 
-namespace behaviac {
-    const uint16_t INVALID_NODE_ID = (uint16_t) - 2;
+namespace behaviac
+{
+	const uint16_t INVALID_NODE_ID = (uint16_t)-2;
 
+    class Property;
     class Agent;
     class BehaviorTask;
     class BehaviorTreeTask;
@@ -63,22 +65,23 @@ namespace behaviac {
     class Precondition;
     class PlannerTaskComplex;
     class Planner;
-    class IInstanceMember;
-    class IInstantiatedVariable;
-    class IProperty;
     /**
     * Return values of exec/update and valid states for behaviors.
     */
-    enum EBTStatus {
+    enum EBTStatus
+    {
         BT_INVALID,
         BT_SUCCESS,
         BT_FAILURE,
         BT_RUNNING,
     };
 
-    class BsonDeserizer {
+    BEHAVIAC_API behaviac::CMethodBase* LoadMethod(const char* value);
+    class BsonDeserizer
+    {
     public:
-        enum BsonTypes {
+        enum BsonTypes
+        {
             BT_None = 0,
             BT_Double = 1,
             BT_String = 2,
@@ -146,31 +149,37 @@ namespace behaviac {
 #endif//USE_DOCUMENET
     };
 
-#define BEHAVIAC_LOCAL_TASK_PARAM_PRE "_$local_task_param_$_"
+	#define BEHAVIAC_LOCAL_TASK_PARAM_PRE "_$local_task_param_$_"
+
     /**
     * Base class for BehaviorTree Nodes. This is the static part
     */
-    class BEHAVIAC_API BehaviorNode : public CRTTIBase {
+    class BEHAVIAC_API BehaviorNode : public CDynamicType
+    {
     public:
-        enum EPhase {
+        enum EPhase
+        {
             E_SUCCESS,
             E_FAILURE,
             E_BOTH
         };
         template<typename T>
-        static bool Register() {
+        static bool Register()
+        {
             Factory().Register<T>();
 
             return true;
         }
 
         template<typename T>
-        static void UnRegister() {
+        static void UnRegister()
+        {
             Factory().UnRegister<T>();
         }
 
         static BehaviorNode* Create(const char* className);
-        virtual bool decompose(BehaviorNode* node, PlannerTaskComplex* seqTask, int depth, Planner* planner) {
+        virtual bool decompose(BehaviorNode* node, PlannerTaskComplex* seqTask, int depth, Planner* planner)
+        {
             BEHAVIAC_UNUSED_VAR(node);
             BEHAVIAC_UNUSED_VAR(seqTask);
             BEHAVIAC_UNUSED_VAR(depth);
@@ -178,7 +187,7 @@ namespace behaviac {
             BEHAVIAC_ASSERT(false, "Can't step into this line");
             return false;
         }
-        static BehaviorNode* load(const char* agentType, behaviac::rapidxml::xml_node<>* node, int version);
+        static BehaviorNode* load(const char* agentType, rapidxml::xml_node<>* node, int version);
 
         static void Cleanup();
 
@@ -192,20 +201,22 @@ namespace behaviac {
 
         uint32_t GetChildrenCount() const;
         const BehaviorNode* GetChild(uint32_t index) const;
-        BehaviorNode* GetChildById(int16_t nodeId) const;
+		BehaviorNode* GetChildById(int16_t nodeId) const;
 
-        const BehaviorNode* GetParent() const {
+        const BehaviorNode* GetParent() const
+        {
             return this->m_parent;
         }
 
         void Clear();
-        virtual bool CheckPreconditions(const Agent* pAgent, bool bIsAlive) const;
+        bool CheckPreconditions(const Agent* pAgent, bool bIsAlive) const;
         virtual void ApplyEffects(Agent* pAgent, BehaviorNode::EPhase phase) const;
-        bool CheckEvents(const char* eventName, Agent* pAgent, behaviac::map<uint32_t, IInstantiatedVariable*>* eventParams) const;
+		bool CheckEvents(const char* eventName, Agent* pAgent, bool bStateStackPushed, bool& bFired) const;
         virtual void Attach(BehaviorNode* pAttachment, bool bIsPrecondition, bool bIsEffector, bool bIsTransition);
         void Attach(BehaviorNode* pAttachment, bool bIsPrecondition, bool bIsEffector);
 
-        virtual bool Evaluate(Agent* pAgent) {
+        virtual bool Evaluate(Agent* pAgent)
+        {
             BEHAVIAC_UNUSED_VAR(pAgent);
             BEHAVIAC_ASSERT(false, "Only Condition/Sequence/And/Or allowed");
             return false;
@@ -215,9 +226,12 @@ namespace behaviac {
         //so that they are treated as a return-running node and the next update will continue them.
         virtual bool IsManagingChildrenAsSubTrees() const;
 
+        void InstantiatePars(Agent* pAgent) const;
+        void UnInstantiatePars(Agent* pAgent) const;
+
     protected:
         BEHAVIAC_DECLARE_MEMORY_OPERATORS(BehaviorNode);
-        BEHAVIAC_DECLARE_ROOT_DYNAMIC_TYPE(BehaviorNode, CRTTIBase);
+        BEHAVIAC_DECLARE_ROOT_DYNAMIC_TYPE(BehaviorNode, CDynamicType);
 
         BehaviorNode();
         virtual ~BehaviorNode();
@@ -226,15 +240,15 @@ namespace behaviac {
 
         virtual void load(int version, const char* agentType, const properties_t& properties);
 
-        virtual void load_local(int version, const char* agentType, behaviac::rapidxml::xml_node<>* node);
-        void load_properties(int version, const char* agentType, behaviac::rapidxml::xml_node<>* node);
-        void load_properties_pars(int version, const char* agentType, behaviac::rapidxml::xml_node<>* node);
-        bool load_property_pars(properties_t& properties, behaviac::rapidxml::xml_node<>* c, int version, const char* agentType);
-        bool load_attachment(int version, const char* agentType, bool bHasEvents, behaviac::rapidxml::xml_node<>*  c);
-        void load_properties_pars_attachments_children(bool bNode, int version, const char* agentType, behaviac::rapidxml::xml_node<>* node);
-        void load_attachment_transition_effectors(int version, const char* agentType, behaviac::rapidxml::xml_node<>* c);
+        void load_par(int version, const char* agentType, rapidxml::xml_node<>* node);
+        void load_properties(int version, const char* agentType, rapidxml::xml_node<>* node);
+        void load_properties_pars(int version, const char* agentType, rapidxml::xml_node<>* node);
+        bool load_property_pars(properties_t& properties, rapidxml::xml_node<>* c, int version, const char* agentType);
+        bool load_attachment(int version, const char* agentType, bool bHasEvents, rapidxml::xml_node<>*  c);
+        void load_properties_pars_attachments_children(bool bNode, int version, const char* agentType, rapidxml::xml_node<>* node);
+        void load_attachment_transition_effectors(int version, const char* agentType, rapidxml::xml_node<>* c);
 
-        virtual void load_local(int version, const char* agentType, BsonDeserizer& d);
+        void load_par(int version, const char* agentType, BsonDeserizer& d);
         void load_pars(int version, const char* agentType, BsonDeserizer& d);
         void load_properties(int version, const char* agentType, BsonDeserizer& d);
         void load_attachments(int version, const char* agentType, BsonDeserizer& d, bool bIsTransition);
@@ -251,11 +265,12 @@ namespace behaviac {
         void SetClassNameString(const char* className);
         const behaviac::string& GetClassNameString() const;
 
-        int16_t GetId() const;
-        void SetId(int16_t id);
+		int16_t GetId() const;
+		void SetId(int16_t id);
 
         void SetAgentType(const behaviac::string& agentType);
 
+        void AddPar(const char* agentType, const char* type, const char* name, const char* value);
         bool EvaluteCustomCondition(const Agent* pAgent);
         void SetCustomCondition(BehaviorNode* node);
 
@@ -268,7 +283,7 @@ namespace behaviac {
 
         behaviac::string		m_className;
         behaviac::string		m_agentType;
-        int16_t					m_id;
+		int16_t					m_id;
         char					m_enter_precond;
         char					m_update_precond;
         char					m_both_precond;
@@ -279,7 +294,8 @@ namespace behaviac {
         behaviac::vector<BehaviorNode*>		m_events;
 
     protected:
-
+        typedef behaviac::vector<Property*> Properties_t;
+        Properties_t*		m_pars;
 
         BehaviorNode*		m_parent;
         typedef behaviac::vector<BehaviorNode*> Nodes;
@@ -293,7 +309,8 @@ namespace behaviac {
         friend class Agent;
     };
 
-    class BEHAVIAC_API DecoratorNode : public BehaviorNode {
+    class BEHAVIAC_API DecoratorNode : public BehaviorNode
+    {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(DecoratorNode, BehaviorNode);
 
@@ -315,55 +332,51 @@ namespace behaviac {
     };
 
     // ============================================================================
-    class BEHAVIAC_API BehaviorTree : public BehaviorNode {
+    class BEHAVIAC_API BehaviorTree : public BehaviorNode
+    {
     public:
         /**
         return the path relative to the workspace path
         */
-        const behaviac::string& GetName() const {
+        const behaviac::string& GetName() const
+        {
             return this->m_name;
         }
 
-        void SetName(const char* name) {
+        void SetName(const char* name)
+        {
             this->m_name = name;
         }
 
         const behaviac::string& GetDomains() const;
         void SetDomains(const behaviac::string& domains);
 
-        //struct Descriptor_t
-        //{
-        //    IInstanceMember*			Descriptor;
-        //    IInstanceMember*			Reference;
+        struct Descriptor_t
+        {
+            Property*			Descriptor;
+            Property*			Reference;
 
-        //    Descriptor_t() : Descriptor(0), Reference(0)
-        //    {}
+            Descriptor_t() : Descriptor(0), Reference(0)
+            {}
 
-        //    Descriptor_t(const Descriptor_t& copy)
-        //        : Descriptor(copy.Descriptor)
-        //        , Reference(copy.Reference)
-        //    {}
+            Descriptor_t(const Descriptor_t& copy)
+                : Descriptor(copy.Descriptor)
+                , Reference(copy.Reference)
+            {}
 
-        //    ~Descriptor_t()
-        //    {
-        //    }
+            ~Descriptor_t()
+            {
+            }
 
-        //    DECLARE_BEHAVIAC_STRUCT(BehaviorTree::Descriptor_t);
-        //};
+            DECLARE_BEHAVIAC_STRUCT(BehaviorTree::Descriptor_t);
+        };
 
-        //typedef behaviac::vector<Descriptor_t>	Descriptors_t;
-        //const Descriptors_t GetDescriptors() const;
-        //void SetDescriptors(const char* descriptors);
+        typedef behaviac::vector<Descriptor_t>	Descriptors_t;
+        const Descriptors_t GetDescriptors() const;
+        void SetDescriptors(const char* descriptors);
 
         bool IsFSM();
         void SetIsFSM(bool isFsm);
-        void load_local(int version, const char* agentType, behaviac::rapidxml::xml_node<>* node);
-        void load_local(int version, const char* agentType, BsonDeserizer& d);
-
-        void AddLocal(const char* agentType, const char* typeName, const char* name, const char* valueStr);
-
-        // deprecated, to use AddLocal
-        void AddPar(const char* agentType, const char* typeName, const char* name, const char* valueStr);
 
     protected:
         BEHAVIAC_DECLARE_MEMORY_OPERATORS(BehaviorTree);
@@ -376,23 +389,17 @@ namespace behaviac {
         virtual BehaviorTask* createTask() const;
         bool load_xml(char* pBuffer);
         bool load_bson(const char* pBuffer);
-    public:
-        void InstantiatePars(behaviac::map<uint32_t, IInstantiatedVariable*>& vars);
-        void UnInstantiatePars(behaviac::map<uint32_t, IInstantiatedVariable*>& vars);
-        typedef behaviac::map<uint32_t, IProperty*> Properties_t;
-        Properties_t m_localProps;
+
     protected:
         bool					m_bIsFSM;
         behaviac::string		m_name;
         behaviac::string		m_domains;
-        //Descriptors_t			m_descriptorRefs;
+        Descriptors_t			m_descriptorRefs;
+
         friend class BehaviorTreeTask;
         friend class BehaviorNode;
         friend class Workspace;
     };
 } // namespace behaviac
 
-DECLARE_BEHAVIAC_ENUM_EX(behaviac::EBTStatus, EBTStatus);
-BEHAVIAC_DECLARE_TYPE_VECTOR_HANDLER(behaviac::EBTStatus);
-
-#endif//_BEHAVIAC_BEHAVIORTREE_NODE_H_
+#endif//BEHAVIAC_BEHAVIORTREE_NODE_H

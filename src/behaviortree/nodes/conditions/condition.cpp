@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,105 +11,273 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "behaviac/common/base.h"
+#include "behaviac/base/base.h"
 #include "behaviac/behaviortree/nodes/conditions/condition.h"
 
-#include "behaviac/common/profiler/profiler.h"
+#include "behaviac/base/core/profiler/profiler.h"
 #include "behaviac/behaviortree/nodes/actions/action.h"
-#include "behaviac/common/meta.h"
 
-namespace behaviac {
-    Condition::Condition() : m_opl(0), m_opr(0), m_operator(E_EQUAL) {
+namespace behaviac
+{
+    Condition::Condition() : m_opl(0), m_opl_m(0), m_opr(0), m_opr_m(0), m_comparator(0)
+    {
     }
 
-    Condition::~Condition() {
-        BEHAVIAC_DELETE(m_opl);
-        BEHAVIAC_DELETE(m_opr);
+    Condition::~Condition()
+    {
+        BEHAVIAC_DELETE(m_opl_m);
+        BEHAVIAC_DELETE(m_opr_m);
+        BEHAVIAC_DELETE(m_comparator);
     }
 
-    void Condition::load(int version, const char* agentType, const properties_t& properties) {
-        super::load(version, agentType, properties);
 
-        behaviac::string typeName;
+    Property* Condition::ParseProperty(const char* value, behaviac::string& typeName)
+    {
+        Property* opr = NULL;
 
-        for (propertie_const_iterator_t it = properties.begin(); it != properties.end(); ++it) {
-            const property_t& p = (*it);
+        behaviac::vector<behaviac::string> tokens = StringUtils::SplitTokens(value);
 
-            if (StringUtils::StringEqual(p.name, "Operator")) {
-                this->m_operator = OperationUtils::ParseOperatorType(p.value);
-            } else if (StringUtils::StringEqual(p.name, "Opl")) {
-                const char* pParenthesis = strchr(p.value, '(');
+        if (tokens[0] == "static")
+        {
+            //static int Property1
+            typeName = tokens[1];
 
-                if (pParenthesis == 0) {
-                    this->m_opl = AgentMeta::ParseProperty(p.value);
-                } else {
-                    this->m_opl = AgentMeta::ParseMethod(p.value);
-                }
-            } else if (StringUtils::StringEqual(p.name, "Opr")) {
-                const char* pParenthesis = strchr(p.value, '(');
+            if (tokens.size() == 3)
+            {
+                opr = Property::Create(typeName.c_str(), tokens[2].c_str(), true, NULL);
+            }
+            else
+            {
+                BEHAVIAC_ASSERT(tokens.size() == 4);
+                opr = Property::Create(typeName.c_str(), tokens[2].c_str(), true, tokens[3].c_str());
+            }
+        }
+        else
+        {
+            //int Property1
+            typeName = tokens[0];
 
-                if (pParenthesis == 0) {
-                    this->m_opr = AgentMeta::ParseProperty(p.value);
-                } else {
-                    this->m_opr = AgentMeta::ParseMethod(p.value);
-                }
-            } else {
-                BEHAVIAC_ASSERT(0, "unrecognised property %s", p.name);
+            if (tokens.size() == 2)
+            {
+                opr = Property::Create(typeName.c_str(), tokens[1].c_str(), false, NULL);
+            }
+            else
+            {
+                opr = Property::Create(typeName.c_str(), tokens[1].c_str(), false, tokens[2].c_str());
             }
         }
 
+        return opr;
     }
 
-    bool Condition::IsValid(Agent* pAgent, BehaviorTask* pTask) const {
-        if (!Condition::DynamicCast(pTask->GetNode())) {
+    Property* Condition::LoadLeft(const char* value, behaviac::string& typeName)
+    {
+        Property* opl = NULL;
+
+        if (value[0] != '0')
+        {
+            opl = ParseProperty(value, typeName);
+        }
+
+        return opl;
+    }
+
+    Property* Condition::LoadRight(const char* value, behaviac::string& typeName)
+    {
+        Property* opr = 0;
+
+        if (value && value[0] != '\0')
+        {
+            if (StringUtils::StartsWith(value, "const"))
+            {
+                //const Int32 0
+                const int kConstLength = 5;
+                const char* strRemaining = value + (kConstLength + 1);
+                const char* p = StringUtils::FirstToken(strRemaining, ' ', typeName);
+
+                const char* strVale = (p + 1);
+                opr = Property::Create(typeName.c_str(), strVale);
+            }
+            else
+            {
+                opr = ParseProperty(value, typeName);
+            }
+        }
+
+        return opr;
+    }
+
+    void Condition::load(int version, const char* agentType, const properties_t& properties)
+    {
+        super::load(version, agentType, properties);
+
+        behaviac::string typeName;
+        behaviac::string comparatorName;
+
+        for (propertie_const_iterator_t it = properties.begin(); it != properties.end(); ++it)
+        {
+            const property_t& p = (*it);
+
+            if (strcmp(p.name, "Operator") == 0)
+            {
+                comparatorName = p.value;
+            }
+            else if (strcmp(p.name, "Opl") == 0)
+            {
+                const char* pParenthesis = strchr(p.value, '(');
+
+                if (pParenthesis == 0)
+                {
+					this->m_opl = LoadLeft(p.value, typeName);
+                }
+                else
+                {
+                    this->m_opl_m = Action::LoadMethod(p.value);
+                }
+            }
+            else if (strcmp(p.name, "Opr") == 0)
+            {
+                const char* pParenthesis = strchr(p.value, '(');
+
+                if (pParenthesis == 0)
+                {
+                    this->m_opr = LoadRight(p.value, typeName);
+                }
+                else
+                {
+                    this->m_opr_m = Action::LoadMethod(p.value);
+
+                    if (this->m_opr_m)
+                    {
+                        this->m_opr_m->GetReturnTypeName(typeName);
+                    }
+                }
+            }
+            else
+            {
+                //BEHAVIAC_ASSERT(0, "unrecognised property %s", p.name);
+            }
+        }
+
+        if (!comparatorName.empty() && (this->m_opl || this->m_opl_m) && (this->m_opr || this->m_opr_m))
+        {
+            this->m_comparator = Condition::Create(typeName.c_str(), comparatorName.c_str(), this->m_opl, this->m_opl_m, this->m_opr, this->m_opr_m);
+        }
+    }
+
+    bool Condition::IsValid(Agent* pAgent, BehaviorTask* pTask) const
+    {
+        if (!Condition::DynamicCast(pTask->GetNode()))
+        {
             return false;
         }
 
         return super::IsValid(pAgent, pTask);
     }
 
-    bool Condition::Evaluate(Agent* pAgent) {
-        if (this->m_opl != NULL && this->m_opr != NULL) {
-            return this->m_opl->Compare(pAgent, this->m_opr, this->m_operator);
-        } else {
+    bool Condition::Evaluate(Agent* pAgent)
+    {
+        if (this->m_comparator != NULL)
+        {
+            return this->m_comparator->Execute(pAgent);
+        }
+        else
+        {
             EBTStatus childStatus = BT_INVALID;
             EBTStatus result = this->update_impl((Agent*)pAgent, childStatus);
             return result == BT_SUCCESS;
         }
     }
 
-    BehaviorTask* Condition::createTask() const {
+    BehaviorTask* Condition::createTask() const
+    {
         ConditionTask* pTask = BEHAVIAC_NEW ConditionTask();
 
         return pTask;
     }
 
-    void Condition::Cleanup() {
+    Condition::VariableComparators* Condition::ms_comparatorCreators;
+
+    Condition::VariableComparators& Condition::ComparatorCreators()
+    {
+        if (!ms_comparatorCreators)
+        {
+            ms_comparatorCreators = BEHAVIAC_NEW Condition::VariableComparators;
+        }
+
+        return *ms_comparatorCreators;
     }
 
-    void ConditionTask::copyto(BehaviorTask* target) const {
+    void Condition::Cleanup()
+    {
+        if (ms_comparatorCreators)
+        {
+            ms_comparatorCreators->clear();
+            BEHAVIAC_DELETE(ms_comparatorCreators);
+            ms_comparatorCreators = 0;
+        }
+    }
+
+    VariableComparator* Condition::Create(const char* typeName, const char* comparionOperator, Property* lhs, behaviac::CMethodBase* lhs_m, Property* rhs, behaviac::CMethodBase* rhs_m)
+    {
+        E_VariableComparisonType comparisonType = VariableComparator::ParseComparisonType(comparionOperator);
+
+        bool bAgentPtr = false;
+
+        //it might be par or the right value of condition/assignment
+        if (Agent::IsAgentClassName(typeName))
+        {
+            bAgentPtr = true;
+            typeName = "void*";
+        }
+
+        BEHAVIAC_UNUSED_VAR(bAgentPtr);
+
+        VariableComparatorCreator* pCreator = ComparatorCreators()[typeName];
+
+        if (pCreator)
+        {
+            VariableComparator* pComparator = (*pCreator)(comparisonType, lhs, lhs_m, rhs, rhs_m);
+            return pComparator;
+        }
+        else
+        {
+            BEHAVIAC_LOGWARNING("please add Condition::Register<%s>(\"%s\") in your code\n", typeName, typeName, typeName);
+            BEHAVIAC_ASSERT(0);
+        }
+
+        return 0;
+    }
+
+    void ConditionTask::copyto(BehaviorTask* target) const
+    {
         super::copyto(target);
     }
 
-    void ConditionTask::save(IIONode* node) const {
+    void ConditionTask::save(ISerializableNode* node) const
+    {
         super::save(node);
     }
 
-    void ConditionTask::load(IIONode* node) {
+    void ConditionTask::load(ISerializableNode* node)
+    {
         super::load(node);
     }
 
-    bool ConditionTask::onenter(Agent* pAgent) {
+    bool ConditionTask::onenter(Agent* pAgent)
+    {
         BEHAVIAC_UNUSED_VAR(pAgent);
         return true;
     }
 
-    void ConditionTask::onexit(Agent* pAgent, EBTStatus s) {
+    void ConditionTask::onexit(Agent* pAgent, EBTStatus s)
+    {
         BEHAVIAC_UNUSED_VAR(pAgent);
         BEHAVIAC_UNUSED_VAR(s);
     }
 
-    EBTStatus ConditionTask::update(Agent* pAgent, EBTStatus childStatus) {
+    EBTStatus ConditionTask::update(Agent* pAgent, EBTStatus childStatus)
+    {
         BEHAVIAC_UNUSED_VAR(pAgent);
         BEHAVIAC_UNUSED_VAR(childStatus);
 
