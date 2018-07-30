@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,18 +11,19 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef BEHAVIAC_BEHAVIAC_H
-#define BEHAVIAC_BEHAVIAC_H
+#ifndef _BEHAVIAC_BEHAVIAC_H_
+#define _BEHAVIAC_BEHAVIAC_H_
 
-#include "behaviac/base/base.h"
+#include "behaviac/common/base.h"
 #include "behaviac/agent/agent.h"
 #include "behaviac/agent/registermacros.h"
-#include "behaviac/base/core/profiler/profiler.h"
-#include "behaviac/base/logging/logmanager.h"
+#include "behaviac/common/meta.h"
+#include "behaviac/common/member.h"
+#include "behaviac/common/profiler/profiler.h"
+#include "behaviac/common/logger/logmanager.h"
 #include "behaviac/behaviortree/behaviortree.h"
-#include "behaviac/base/workspace.h"
-#include "behaviac/base/file/filemanager.h"
-#include "behaviac/property/typeregister.h"
+#include "behaviac/common/workspace.h"
+#include "behaviac/common/file/filemanager.h"
+#include "behaviac/common/randomgenerator/randomgenerator.h"
 
-
-#endif // BEHAVIAC_BEHAVIAC_H
+#endif // _BEHAVIAC_BEHAVIAC_H_

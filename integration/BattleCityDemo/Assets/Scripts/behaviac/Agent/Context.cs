@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -133,13 +133,16 @@ namespace behaviac
             {
                 Context c = Context.GetContext(pAgent.GetContextId());
 
-                if (c.m_IsExecuting)
+                if (c != null)
                 {
-                    c.delayAddedAgents.Add(pAgent);
-                }
-                else
-                {
-                    c.addAgent_(pAgent);
+                    if (c.m_IsExecuting)
+                    {
+                        c.delayAddedAgents.Add(pAgent);
+                    }
+                    else
+                    {
+                        c.addAgent_(pAgent);
+                    }
                 }
             }
         }
@@ -150,13 +153,16 @@ namespace behaviac
             {
                 Context c = Context.GetContext(pAgent.GetContextId());
 
-                if (c.m_IsExecuting)
+                if (c != null)
                 {
-                    c.delayRemovedAgents.Add(pAgent);
-                }
-                else
-                {
-                    c.removeAgent_(pAgent);
+                    if (c.m_IsExecuting)
+                    {
+                        c.delayRemovedAgents.Add(pAgent);
+                    }
+                    else
+                    {
+                        c.removeAgent_(pAgent);
+                    }
                 }
             }
         }
@@ -231,16 +237,23 @@ namespace behaviac
             {
                 Context pContext = Context.GetContext(contextId);
 
-                pContext.execAgents_();
+                if (pContext != null)
+                {
+                    pContext.execAgents_();
+                }
             }
             else
             {
-                var e = ms_contexts.Values.GetEnumerator();
+                var e = ms_contexts.GetEnumerator();
+
                 while (e.MoveNext())
                 {
-                    Context pContext = e.Current;
+                    Context pContext = e.Current.Value;
 
-                    pContext.execAgents_();
+                    if (pContext != null)
+                    {
+                        pContext.execAgents_();
+                    }
                 }
             }
         }
@@ -259,13 +272,14 @@ namespace behaviac
             for (int i = 0; i < this.Agents.Count; ++i)
             {
                 HeapItem_t pa = this.Agents[i];
-                var e = pa.agents.Values.GetEnumerator();
+                var e = pa.agents.GetEnumerator();
 
                 while (e.MoveNext())
                 {
-                    if (e.Current.IsActive())
+                    Agent pAgent = e.Current.Value;
+                    if (pAgent.IsActive())
                     {
-                        e.Current.btexec();
+                        pAgent.btexec();
 
                         // in case IsExecAgents was set to false by pA's bt
                         if (!Workspace.Instance.IsExecAgents)
@@ -291,11 +305,14 @@ namespace behaviac
             {
                 HeapItem_t pa = this.Agents[i];
                 var e = pa.agents.Values.GetEnumerator();
+
                 while (e.MoveNext())
                 {
                     if (e.Current.IsMasked())
                     {
                         e.Current.LogVariables(true);
+
+                        e.Current.LogRunningNodes();
                     }
                 }
             }
@@ -308,11 +325,16 @@ namespace behaviac
             if (contextId >= 0)
             {
                 Context pContext = Context.GetContext(contextId);
-                pContext.LogCurrentState();
+
+                if (pContext != null)
+                {
+                    pContext.LogCurrentState();
+                }
             }
             else
             {
                 var e = ms_contexts.Values.GetEnumerator();
+
                 while (e.MoveNext())
                 {
                     e.Current.LogCurrentState();

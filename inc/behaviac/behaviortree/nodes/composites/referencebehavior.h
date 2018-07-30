@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,16 +11,15 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef BEHAVIAC_BEHAVIORTREE_REFERENCENODE_H
-#define BEHAVIAC_BEHAVIORTREE_REFERENCENODE_H
+#ifndef _BEHAVIAC_BEHAVIORTREE_REFERENCENODE_H_
+#define _BEHAVIAC_BEHAVIORTREE_REFERENCENODE_H_
 
-#include "behaviac/base/base.h"
+#include "behaviac/common/base.h"
 #include "behaviac/behaviortree/behaviortree.h"
 #include "behaviac/behaviortree/behaviortree_task.h"
-#include "behaviac/base/object/method.h"
 
-namespace behaviac
-{
+
+namespace behaviac {
     /*! \addtogroup treeNodes Behavior Tree
     * @{
     * \addtogroup ReferencedBehavior
@@ -28,20 +27,22 @@ namespace behaviac
     class Task;
     class CTaskMethod;
     class Transition;
+    class AgentState;
 
-    class BEHAVIAC_API ReferencedBehavior : public BehaviorNode
-    {
+    class BEHAVIAC_API ReferencedBehavior : public BehaviorNode {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(ReferencedBehavior, BehaviorNode);
 
         ReferencedBehavior();
         virtual ~ReferencedBehavior();
+#if BEHAVIAC_USE_HTN
         virtual bool decompose(BehaviorNode* node, PlannerTaskComplex* seqTask, int depth, Planner* planner);
+#endif //BEHAVIAC_USE_HTN
         virtual void load(int version, const char* agentType, const properties_t& properties);
-        void SetTaskParams(Agent* pAgent);
-		Task* RootTaskNode(Agent* pAgent);
+        void SetTaskParams(Agent* pAgent, BehaviorTreeTask* treeTask);
+        Task* RootTaskNode(Agent* pAgent);
 
-		virtual const char* GetReferencedTree(const Agent* pAgent) const;
+        virtual const char* GetReferencedTree(const Agent* pAgent) const;
         virtual void Attach(BehaviorNode* pAttachment, bool bIsPrecondition, bool bIsEffector, bool bIsTransition);
 
     protected:
@@ -50,17 +51,15 @@ namespace behaviac
         virtual BehaviorTask* createTask() const;
         Task*							m_taskNode;
     protected:
-		Property*		m_referencedBehaviorPath_var;
-		behaviac::CMethodBase*	m_referencedBehaviorPath_m;
+        IInstanceMember*		m_referencedBehaviorPath;
 
-        CTaskMethod*					m_taskMethod;
+        IInstanceMember*					m_taskMethod;
         behaviac::vector<Transition*>*	m_transitions;
 
         friend class ReferencedBehaviorTask;
     };
 
-    class BEHAVIAC_API ReferencedBehaviorTask : public SingeChildTask
-    {
+    class BEHAVIAC_API ReferencedBehaviorTask : public SingeChildTask {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(ReferencedBehaviorTask, SingeChildTask);
 
@@ -71,10 +70,10 @@ namespace behaviac
 
     protected:
         virtual void copyto(BehaviorTask* target) const;
-        virtual void save(ISerializableNode* node) const;
-        virtual void load(ISerializableNode* node);
+        virtual void save(IIONode* node) const;
+        virtual void load(IIONode* node);
 
-		virtual bool onevent(Agent* pAgent, const char* eventName, bool bStateStackPushed, bool& bFired);
+        virtual bool onevent(Agent* pAgent, const char* eventName, behaviac::map<uint32_t, IInstantiatedVariable*>* eventParams);
 
         virtual bool onenter(Agent* pAgent);
         virtual void onexit(Agent* pAgent, EBTStatus s);
@@ -82,12 +81,17 @@ namespace behaviac
         virtual EBTStatus update(Agent* pAgent, EBTStatus childStatus);
 
         virtual int GetNextStateId() const;
+
+        virtual bool CheckPreconditions(const Agent* pAgent, bool bIsAlive) const;
     private:
         int						m_nextStateId;
         BehaviorTreeTask*		m_subTree;
+#if BEHAVIAC_USE_HTN
+        AgentState*             m_currentState;
+#endif//
     };
     /*! @} */
     /*! @} */
 }
 
-#endif//BEHAVIAC_BEHAVIORTREE_REFERENCENODE_H
+#endif//_BEHAVIAC_BEHAVIORTREE_REFERENCENODE_H_

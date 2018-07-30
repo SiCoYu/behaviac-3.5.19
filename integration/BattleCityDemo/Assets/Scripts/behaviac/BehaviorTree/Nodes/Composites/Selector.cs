@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -69,6 +69,7 @@ namespace behaviac
         public override bool Evaluate(Agent pAgent)
         {
             bool ret = true;
+
             for (int i = 0; i < this.m_children.Count; ++i)
             {
                 BehaviorNode c = this.m_children[i];
@@ -94,6 +95,7 @@ namespace behaviac
                 if (s == EBTStatus.BT_RUNNING)
                 {
                     BehaviorTask pBehavior = children[activeChildIndex];
+
                     if (this.CheckIfInterrupted(pAgent))
                     {
                         return EBTStatus.BT_FAILURE;
@@ -102,7 +104,7 @@ namespace behaviac
                     s = pBehavior.exec(pAgent);
                 }
 
-                // If the child fails, or keeps running, do the same.
+                // If the child succeeds, or keeps running, do the same.
                 if (s != EBTStatus.BT_FAILURE)
                 {
                     return s;

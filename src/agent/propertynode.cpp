@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -13,199 +13,167 @@
 
 #include "./propertynode.h"
 
-namespace behaviac
-{
-	CPropertyNode::~CPropertyNode()
-	{
-	}
+#include "behaviac/common/member.h"
 
-	SerializableNodeRef CPropertyNode::clone() const
-	{
-		return GetNodeRef(BEHAVIAC_NEW CPropertyNode(this->m_pAgent, this->m_tag.c_str()));
-	}
+namespace behaviac {
+    CPropertyNode::~CPropertyNode() {
+    }
 
-	int32_t CPropertyNode::getChildCount() const
-	{
-		return (int32_t)m_children.size();
-	}
+    IONodeRef CPropertyNode::clone() const {
+        return GetNodeRef(BEHAVIAC_NEW CPropertyNode(this->m_pAgent, this->m_tag.c_str()));
+    }
 
-	ISerializableNode* CPropertyNode::getChild(int32_t childIndex)
-	{
-		BEHAVIAC_ASSERT(childIndex < getChildCount());
-		ChildrenContainer::iterator iter = m_children.begin();
-		std::advance(iter, childIndex);
-		return &*iter;
-	}
+    int32_t CPropertyNode::getChildCount() const {
+        return (int32_t)m_children.size();
+    }
 
-	const ISerializableNode* CPropertyNode::getChild(int32_t childIndex) const
-	{
-		BEHAVIAC_ASSERT(childIndex < getChildCount());
-		ChildrenContainer::const_iterator iter = m_children.begin();
-		std::advance(iter, childIndex);
-		return &*iter;
-	}
+    IIONode* CPropertyNode::getChild(int32_t childIndex) {
+        BEHAVIAC_ASSERT(childIndex < getChildCount());
+        ChildrenContainer::iterator iter = m_children.begin();
+        std::advance(iter, childIndex);
+        return &*iter;
+    }
 
-	ISerializableNode* CPropertyNode::findChild(const CSerializationID& childID)
-	{
-		{
-			ChildrenContainer::iterator iter, end = m_children.end();
+    const IIONode* CPropertyNode::getChild(int32_t childIndex) const {
+        BEHAVIAC_ASSERT(childIndex < getChildCount());
+        ChildrenContainer::const_iterator iter = m_children.begin();
+        std::advance(iter, childIndex);
+        return &*iter;
+    }
 
-			for (iter = m_children.begin(); iter != end; ++iter)
-			{
-				ISerializableNode* currentChild = &*iter;
+    IIONode* CPropertyNode::findNodeChild(const CIOID& childID) {
+        {
+            ChildrenContainer::iterator iter, end = m_children.end();
 
-				if (currentChild->isTag(childID))
-				{
-					return currentChild;
-				}
-			}
-		}
+            for (iter = m_children.begin(); iter != end; ++iter) {
+                IIONode* currentChild = &*iter;
 
-		return NULL;
-	}
+                if (currentChild->isTag(childID)) {
+                    return currentChild;
+                }
+            }
+        }
 
-	const ISerializableNode* CPropertyNode::findChild(const CSerializationID& childID) const
-	{
-		{
-			ChildrenContainer::const_iterator iter, end = m_children.end();
+        return NULL;
+    }
 
-			for (iter = m_children.begin(); iter != end; ++iter)
-			{
-				const ISerializableNode* currentChild = &*iter;
+    const IIONode* CPropertyNode::findNodeChild(const CIOID& childID) const {
+        {
+            ChildrenContainer::const_iterator iter, end = m_children.end();
 
-				if (currentChild->isTag(childID))
-				{
-					return currentChild;
-				}
-			}
-		}
+            for (iter = m_children.begin(); iter != end; ++iter) {
+                const IIONode* currentChild = &*iter;
 
-		return NULL;
-	}
+                if (currentChild->isTag(childID)) {
+                    return currentChild;
+                }
+            }
+        }
 
-	CPropertyNode* CPropertyNode::newChild(const CSerializationID& childID)
-	{
-		behaviac::string tag(this->m_tag);
-		tag += "::";
-		tag += childID.GetString();
+        return NULL;
+    }
 
-		CPropertyNode newXmlChild(this->m_pAgent, tag.c_str());
+    CPropertyNode* CPropertyNode::newNodeChild(const CIOID& childID) {
+        behaviac::string tag(this->m_tag);
+        tag += "::";
+        tag += childID.GetString();
 
-		m_children.push_back(newXmlChild);
-		return &m_children.back();
-	}
+        CPropertyNode newXmlChild(this->m_pAgent, tag.c_str());
 
-	void CPropertyNode::removeChild(ISerializableNode* child)
-	{
-		{
-			ChildrenContainer::iterator iter, end = m_children.end();
+        m_children.push_back(newXmlChild);
+        return &m_children.back();
+    }
 
-			for (iter = m_children.begin(); iter != end; ++iter)
-			{
-				if (&*iter == child)
-				{
-					m_children.erase(iter);
-					return;
-				}
-			}
-		}
-	}
+    void CPropertyNode::removeNodeChild(IIONode* child) {
+        {
+            ChildrenContainer::iterator iter, end = m_children.end();
 
-	int32_t CPropertyNode::getAttributesCount() const
-	{
-		return 0;
-	}
+            for (iter = m_children.begin(); iter != end; ++iter) {
+                if (&*iter == child) {
+                    m_children.erase(iter);
+                    return;
+                }
+            }
+        }
+    }
 
-	void CPropertyNode::RebuildChildrenList()
-	{
-	}
+    int32_t CPropertyNode::getAttributesCount() const {
+        return 0;
+    }
 
-	////////////////////////////////////////////////////////////////////////////////
-	// set/getAttr type specializations
-	////////////////////////////////////////////////////////////////////////////////
-	void CPropertyNode::addChild(const CSerializationID& keyID, const ISerializableNode* child)
-	{
-		BEHAVIAC_UNUSED_VAR(keyID);
-		BEHAVIAC_UNUSED_VAR(child);
-	}
+    void CPropertyNode::RebuildChildrenList() {
+    }
 
-	void CPropertyNode::addChild(XmlNodeRef xmlChild)
-	{
-		BEHAVIAC_UNUSED_VAR(xmlChild);
-	}
+    ////////////////////////////////////////////////////////////////////////////////
+    // set/getAttr type specializations
+    ////////////////////////////////////////////////////////////////////////////////
+    void CPropertyNode::addChild(const CIOID& keyID, const IIONode* child) {
+        BEHAVIAC_UNUSED_VAR(keyID);
+        BEHAVIAC_UNUSED_VAR(child);
+    }
 
-	bool CPropertyNode::LoadFromFile(const char* fileName)
-	{
-		BEHAVIAC_UNUSED_VAR(fileName);
-		return (false);
-	}
+    void CPropertyNode::addChild(XmlNodeReference xmlChild) {
+        BEHAVIAC_UNUSED_VAR(xmlChild);
+    }
 
-	bool CPropertyNode::SaveToFile(const char* fileName) const
-	{
-		BEHAVIAC_UNUSED_VAR(fileName);
-		return false;
-	}
+    bool CPropertyNode::LoadFromFile(const char* fileName) {
+        BEHAVIAC_UNUSED_VAR(fileName);
+        return (false);
+    }
 
-	bool CPropertyNode::LoadFromFile(IFile* file)
-	{
-		BEHAVIAC_UNUSED_VAR(file);
-		return (false);
-	}
+    bool CPropertyNode::SaveToFile(const char* fileName) const {
+        BEHAVIAC_UNUSED_VAR(fileName);
+        return false;
+    }
 
-	bool CPropertyNode::SaveToFile(IFile* file) const
-	{
-		BEHAVIAC_UNUSED_VAR(file);
-		return false;
-	}
+    bool CPropertyNode::LoadFromFile(IFile* file) {
+        BEHAVIAC_UNUSED_VAR(file);
+        return (false);
+    }
 
-	// This is a very unprecise approximation...
-	int32_t CPropertyNode::GetMemUsage() const
-	{
-		int32_t memUsage = sizeof(CPropertyNode);
+    bool CPropertyNode::SaveToFile(IFile* file) const {
+        BEHAVIAC_UNUSED_VAR(file);
+        return false;
+    }
 
-		{
-			ChildrenContainer::const_iterator iter, end = m_children.end();
+    // This is a very unprecise approximation...
+    int32_t CPropertyNode::GetMemUsage() const {
+        int32_t memUsage = sizeof(CPropertyNode);
 
-			for (iter = m_children.begin(); iter != end; ++iter)
-			{
-				memUsage += iter->GetMemUsage();
-			}
-		}
+        {
+            ChildrenContainer::const_iterator iter, end = m_children.end();
 
-		return memUsage;
-	}
+            for (iter = m_children.begin(); iter != end; ++iter) {
+                memUsage += iter->GetMemUsage();
+            }
+        }
 
-	const char* CPropertyNode::getAttrRaw(const CSerializationID& keyID, int typeId, int length) const
-	{
+        return memUsage;
+    }
+
+    const char* CPropertyNode::getAttrRaw(const CIOID& keyID, int typeId, int length) const {
+		BEHAVIAC_UNUSED_VAR(typeId);
 		BEHAVIAC_UNUSED_VAR(length);
 
-		const behaviac::CMemberBase* m = this->m_pAgent->FindMember(keyID.GetID());
+        behaviac::IInstantiatedVariable* pInstantiatedVariable = this->m_pAgent->GetInstantiatedVariable(keyID.GetID().GetUniqueID());
 
-		if (m)
-		{
-			behaviac::CMemberBase* pM = const_cast<behaviac::CMemberBase*>(m);
+        if (pInstantiatedVariable) {
+            const void* p = pInstantiatedVariable->GetValueObject(this->m_pAgent);
 
-			//void* p = pM->Get(this->m_pAgent, typeId);
-			void* p = pM->GetVariable(this->m_pAgent, typeId);
+            return (const char*)p;
+        }
 
-			return (const char*)p;
-		}
+        return 0;
+    }
 
-		return 0;
-	}
-
-	void CPropertyNode::setAttrRaw(const CSerializationID& keyID, const char* valueData, int typeId, int length)
-	{
+    void CPropertyNode::setAttrRaw(const CIOID& keyID, const char* valueData, int typeId, int length) {
+		BEHAVIAC_UNUSED_VAR(typeId);
 		BEHAVIAC_UNUSED_VAR(length);
 
-		const behaviac::CMemberBase* m = this->m_pAgent->FindMember(keyID.GetString());
+        behaviac::IInstantiatedVariable* pInstantiatedVariable = this->m_pAgent->GetInstantiatedVariable(keyID.GetID().GetUniqueID());
 
-		if (m)
-		{
-			behaviac::CMemberBase* pM = const_cast<behaviac::CMemberBase*>(m);
-
-			//pM->Set(this->m_pAgent, valueData, typeId);
-			pM->SetVariable(this->m_pAgent, valueData, typeId);
-		}
-	}
+        if (pInstantiatedVariable) {
+            pInstantiatedVariable->SetValue(this->m_pAgent, valueData);
+        }
+    }
 }//namespace behaviac

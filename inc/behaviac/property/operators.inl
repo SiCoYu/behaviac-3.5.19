@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -14,11 +14,13 @@
 #ifndef _BEHAVIAC_OPERATORS_INL_H_
 #define _BEHAVIAC_OPERATORS_INL_H_
 
-#include "behaviac/base/meta/meta.h"
-#include "behaviac/base/meta/isenum.h"
+#include "behaviac/common/meta/meta.h"
+
 namespace behaviac
 {
-    namespace Details
+	bool Equal_Struct(void* lhs, void* rhs, const char* szClassName);
+
+	namespace PrivateDetails
     {
         namespace Meta
         {
@@ -27,19 +29,19 @@ namespace behaviac
             {
             private:
 
-                template<typename U, bool (U::*)(const U&) const> struct SFINAE {};
+                template<typename U, bool (U::*)(const U&) const> struct TPROTOTYPE {};
 
                 template< typename U >
-				static behaviac::Meta::Yes Tester(SFINAE<U, &U::_Object_Equal_>*);
+				static behaviac::Meta::Yes TYesNoTester(TPROTOTYPE<U, &U::_Object_Equal_>*);
 
                 template<typename U>
-                static behaviac::Meta::No Tester(...);
+                static behaviac::Meta::No TYesNoTester(...);
 
             public:
 
                 enum
                 {
-                    Result = sizeof(Tester<Type>(0)) == sizeof(behaviac::Meta::Yes)
+                    Result = sizeof(TYesNoTester<Type>(0)) == sizeof(behaviac::Meta::Yes)
                 };
             };
         }
@@ -128,7 +130,8 @@ namespace behaviac
         {
             static bool Equal(const T& lhs, const T& rhs)
             {
-				return lhs._Object_Equal_(rhs);
+				const char* szClassName = GetClassTypeName((T*)0);
+				return behaviac::Equal_Struct(lhs, rhs, szClassName);
             }
 
             static bool Greater(const T& lhs, const T& rhs)
@@ -169,27 +172,27 @@ namespace behaviac
         {
             static bool Equal(const T& lhs, const T& rhs)
             {
-                return TCompareOperatorStruct<T, Details::Meta::HasEqual<T>::Result>::Equal(lhs, rhs);
+                return TCompareOperatorStruct<T, PrivateDetails::Meta::HasEqual<T>::Result>::Equal(lhs, rhs);
             }
 
             static bool Greater(const T& lhs, const T& rhs)
             {
-                return TCompareOperatorStruct<T, Details::Meta::HasEqual<T>::Result>::Greater(lhs, rhs);
+                return TCompareOperatorStruct<T, PrivateDetails::Meta::HasEqual<T>::Result>::Greater(lhs, rhs);
             }
 
             static bool GreaterEqual(const T& lhs, const T& rhs)
             {
-                return TCompareOperatorStruct<T, Details::Meta::HasEqual<T>::Result>::GreaterEqual(lhs, rhs);
+                return TCompareOperatorStruct<T, PrivateDetails::Meta::HasEqual<T>::Result>::GreaterEqual(lhs, rhs);
             }
 
             static bool Less(const T& lhs, const T& rhs)
             {
-                return TCompareOperatorStruct<T, Details::Meta::HasEqual<T>::Result>::Less(lhs, rhs);
+                return TCompareOperatorStruct<T, PrivateDetails::Meta::HasEqual<T>::Result>::Less(lhs, rhs);
             }
 
             static bool LessEqual(const T& lhs, const T& rhs)
             {
-                return TCompareOperatorStruct<T, Details::Meta::HasEqual<T>::Result>::LessEqual(lhs, rhs);
+                return TCompareOperatorStruct<T, PrivateDetails::Meta::HasEqual<T>::Result>::LessEqual(lhs, rhs);
             }
         };
 
@@ -253,7 +256,6 @@ namespace behaviac
             }
         };
 
-
         template <typename T>
         struct TCompareOperatorPtr<T, true>
         {
@@ -283,7 +285,6 @@ namespace behaviac
                 return (behaviac::Address)lhs <= (behaviac::Address)rhs;
             }
         };
-
 
         //------------------------------------------------------------------------
         template< typename T >
@@ -694,6 +695,7 @@ namespace behaviac
             return lhs == rhs;
         }
 
+#if BEHAVIAC_USE_CUSTOMSTRING
         //------------------------------------------------------------------------
         template<>
         BEHAVIAC_FORCEINLINE bool Equal(const behaviac::string& lhs, const behaviac::string& rhs)
@@ -724,8 +726,9 @@ namespace behaviac
         {
             return lhs <= rhs;
         }
+#endif
 
-#if !BEHAVIAC_COMPILER_64BITS
+#if !BEHAVIAC_CCDEFINE_64BITS
         //------------------------------------------------------------------------
         template<>
         BEHAVIAC_FORCEINLINE bool Equal(const int64_t& lhs, const int64_t& rhs)
@@ -908,7 +911,7 @@ namespace behaviac
 
             return false;
         }
-    }//namespace Details
+    }//namespace PrivatePrivateDetails
 }//namespace behaviac
 
 #endif//_BEHAVIAC_OPERATORS_INL_H_

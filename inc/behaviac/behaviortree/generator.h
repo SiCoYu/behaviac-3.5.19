@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,8 +11,8 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef BEHAVIAC_GENERATOR_H
-#define BEHAVIAC_GENERATOR_H
+#ifndef _BEHAVIAC_GENERATOR_H_
+#define _BEHAVIAC_GENERATOR_H_
 
 /*
 void generator_test()
@@ -44,8 +44,7 @@ for(int n; gen(n);) // "get next" generator invocation
 }
 */
 
-struct _generator
-{
+struct _generator {
     int _line;
     _generator() : _line(0) {}
 };
@@ -63,4 +62,4 @@ struct _generator
     _rv = (V); return true; case __LINE__:;\
     } while (0)
 
-#endif//BEHAVIAC_GENERATOR_H
+#endif//_BEHAVIAC_GENERATOR_H_

@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -15,68 +15,56 @@
 
 #include "behaviac/behaviortree/nodes/conditions/condition.h"
 #include "behaviac/behaviortree/nodes/actions/action.h"
-#include "behaviac/property/property_t.h"
 
 #include "behaviac/htn/planner.h"
 #include "behaviac/htn/plannertask.h"
+#include "behaviac/common/meta.h"
 
-namespace behaviac
-{
-    DecoratorIterator::DecoratorIterator() : m_opl(0), m_opr(0), m_opr_m(0)
-    {
+namespace behaviac {
+    DecoratorIterator::DecoratorIterator() : m_opl(0), m_opr(0) {
     }
-    DecoratorIterator::~DecoratorIterator()
-    {
-        BEHAVIAC_DELETE(m_opr_m);
+    DecoratorIterator::~DecoratorIterator() {
+        BEHAVIAC_DELETE(m_opl);
+        BEHAVIAC_DELETE(m_opr);
     }
 
-    void DecoratorIterator::load(int version, const char*  agentType, const properties_t& properties)
-    {
+    void DecoratorIterator::load(int version, const char*  agentType, const properties_t& properties) {
         super::load(version, agentType, properties);
 
         behaviac::string typeName;
         behaviac::string propertyName;
 
-        for (propertie_const_iterator_t p = properties.begin(); p != properties.end(); ++p)
-        {
-            if (strcmp(p->name, "Opl") == 0)
-            {
+        for (propertie_const_iterator_t p = properties.begin(); p != properties.end(); ++p) {
+            if (StringUtils::StringEqual(p->name, "Opl")) {
                 behaviac::string str(p->value);
                 size_t pParenthesis = str.find_first_of('(');
 
-				if (pParenthesis == (size_t)-1)
-                {
-					this->m_opl = Condition::LoadLeft(p->value, typeName);
-                }
-                else
-                {
+                if (pParenthesis == (size_t) - 1) {
+                    //this->m_opl = Condition::LoadLeft(p->value, typeName);
+                    this->m_opl = AgentMeta::ParseProperty(p->value);
+                } else {
                     BEHAVIAC_ASSERT(false);
                 }
-            }
-            else if (strcmp(p->name, "Opr") == 0)
-            {
+            } else if (StringUtils::StringEqual(p->name, "Opr")) {
                 behaviac::string str(p->value);
                 size_t pParenthesis = str.find_first_of('(');
 
-				if (pParenthesis == (size_t)-1)
-                {
-                    this->m_opr = Condition::LoadRight(p->value, typeName);
-                }
-                else
-                {
+                if (pParenthesis == (size_t) - 1) {
+                    //this->m_opr = Condition::LoadRight(p->value, typeName);
+                    this->m_opr = AgentMeta::ParseProperty(p->value);
+                } else {
                     //method
-                    this->m_opr_m = Action::LoadMethod(p->value);
+                    this->m_opr = AgentMeta::ParseMethod(p->value);
                 }
-            }
-            else
-            {
+            } else {
                 //BEHAVIAC_ASSERT(0, "unrecognised property %s", p->name);
             }
         }
     }
 
-    bool DecoratorIterator::decompose(BehaviorNode* node, PlannerTaskComplex* seqTask, int depth, Planner* planner)
-    {
+#if BEHAVIAC_USE_HTN
+
+    bool DecoratorIterator::decompose(BehaviorNode* node, PlannerTaskComplex* seqTask, int depth, Planner* planner) {
         bool bOk = false;
         DecoratorIterator* pForEach = (DecoratorIterator*)node;
         int childCount = pForEach->GetChildrenCount();
@@ -88,26 +76,23 @@ namespace behaviac
         int count = 0;
         int index = 0;
 
-        while (bGoOn)
-        {
-            int depth2 = planner->GetAgent()->m_variables.Depth();
+        while (bGoOn) {
+            int depth2 = planner->GetAgent()->m_variables->Depth();
             BEHAVIAC_UNUSED_VAR(depth2);
             {
-                AgentState::AgentStateScope scopedState(planner->GetAgent()->m_variables.Push(false));
+                AgentState::AgentStateScope scopedState(planner->GetAgent()->m_variables->Push(false));
 
                 bGoOn = pForEach->IterateIt(planner->GetAgent(), index, count);
 
-                if (bGoOn)
-                {
+                if (bGoOn) {
                     planner->LogPlanForEachBegin(planner->GetAgent(), pForEach, index, count);
                     PlannerTask* childTask = planner->decomposeNode(childNode, depth);
                     planner->LogPlanForEachEnd(planner->GetAgent(), pForEach, index, count, childTask != NULL ? "success" : "failure");
 
-                    if (childTask != NULL)
-                    {
+                    if (childTask != NULL) {
                         BEHAVIAC_ASSERT(PlannerTaskIterator::DynamicCast(seqTask) != 0);
                         PlannerTaskIterator* pForEachTask = (PlannerTaskIterator*)seqTask;
-						pForEachTask->SetIndex(index);
+                        pForEachTask->SetIndex(index);
 
                         seqTask->AddChild(childTask);
                         bOk = true;
@@ -116,60 +101,41 @@ namespace behaviac
 
                     index++;
                 }
-
-                BEHAVIAC_ASSERT(planner->GetAgent()->m_variables.Depth() == depth2);
             }
+
+            BEHAVIAC_ASSERT(planner->GetAgent()->m_variables->Depth() == depth2);
         }
 
         return bOk;
     }
+#endif
 
-    bool DecoratorIterator::IsValid(Agent* pAgent, BehaviorTask* pTask) const
-    {
-        if (DecoratorIterator::DynamicCast(pTask->GetNode()) == 0)
-        {
+    bool DecoratorIterator::IsValid(Agent* pAgent, BehaviorTask* pTask) const {
+        if (DecoratorIterator::DynamicCast(pTask->GetNode()) == 0) {
             return false;
         }
 
         return super::IsValid(pAgent, pTask);
     }
 
-    bool DecoratorIterator::IterateIt(Agent* pAgent, int index, int& count)
-    {
+    bool DecoratorIterator::IterateIt(Agent* pAgent, int index, int& count) {
         BEHAVIAC_UNUSED_VAR(count);
 
-        if (this->m_opr_m != NULL)
-        {
-            this->m_opr_m->Invoke(pAgent);
-            Agent* pParentOpl = this->m_opl->GetParentAgent(pAgent);
-            Agent* pParentR = this->m_opr_m->GetParentAgent(pAgent);
+        if (this->m_opl != NULL && this->m_opr != NULL) {
+            count = this->m_opr->GetCount(pAgent);
 
-            this->m_opl->SetFrom(pParentR, this->m_opr_m, pParentOpl, index);
-
-            return true;
-
-        }
-        else if (this->m_opr != NULL)
-        {
-            Agent* pParentL = this->m_opl->GetParentAgent(pAgent);
-            Agent* pParentR = this->m_opr->GetParentAgent(pAgent);
-
-            //m_opr is a vector
-            this->m_opr->SetVectorElementTo(pParentR, index, this->m_opl, pParentL);
-
-            return true;
-
-        }
-        else
-        {
+            if (index >= 0 && index < count) {
+                this->m_opl->SetValueElement(pAgent, this->m_opr, index);
+                return true;
+            }
+        } else {
             BEHAVIAC_ASSERT(false);
         }
 
         return false;
     }
 
-    BehaviorTask* DecoratorIterator::createTask() const
-    {
+    BehaviorTask* DecoratorIterator::createTask() const {
         BEHAVIAC_ASSERT(false);
         return NULL;
     }

@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,15 +11,14 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef BEHAVIAC_BEHAVIORTREE_DECORATORALWAYSRUNNING_H
-#define BEHAVIAC_BEHAVIORTREE_DECORATORALWAYSRUNNING_H
+#ifndef _BEHAVIAC_BEHAVIORTREE_DECORATORALWAYSRUNNING_H_
+#define _BEHAVIAC_BEHAVIORTREE_DECORATORALWAYSRUNNING_H_
 
-#include "behaviac/base/base.h"
+#include "behaviac/common/base.h"
 #include "behaviac/behaviortree/behaviortree.h"
 #include "behaviac/behaviortree/behaviortree_task.h"
 
-namespace behaviac
-{
+namespace behaviac {
     /*! \addtogroup treeNodes Behavior Tree
     * @{
     * \addtogroup DecoratorAlwaysRunning
@@ -28,8 +27,7 @@ namespace behaviac
     /**
     No matter what child return. DecoratorAlwaysRunning always return Running. it can only has one child node.
     */
-    class BEHAVIAC_API DecoratorAlwaysRunning : public DecoratorNode
-    {
+    class BEHAVIAC_API DecoratorAlwaysRunning : public DecoratorNode {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(DecoratorAlwaysRunning, DecoratorNode);
 
@@ -42,20 +40,18 @@ namespace behaviac
         virtual BehaviorTask* createTask() const;
     };
 
-    class BEHAVIAC_API DecoratorAlwaysRunningTask : public DecoratorTask
-    {
+    class BEHAVIAC_API DecoratorAlwaysRunningTask : public DecoratorTask {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(DecoratorAlwaysRunningTask, DecoratorTask);
 
-        DecoratorAlwaysRunningTask() : DecoratorTask()
-        {
+        DecoratorAlwaysRunningTask() : DecoratorTask() {
         }
 
         virtual void addChild(BehaviorTask* pBehavior);
     protected:
         virtual void copyto(BehaviorTask* target) const;
-        virtual void save(ISerializableNode* node) const;
-        virtual void load(ISerializableNode* node);
+        virtual void save(IIONode* node) const;
+        virtual void load(IIONode* node);
 
         virtual EBTStatus decorate(EBTStatus status);
     };
@@ -63,4 +59,4 @@ namespace behaviac
     /*! @} */
 }
 
-#endif//BEHAVIAC_BEHAVIORTREE_DECORATORALWAYSRUNNING_H
+#endif//_BEHAVIAC_BEHAVIORTREE_DECORATORALWAYSRUNNING_H_
