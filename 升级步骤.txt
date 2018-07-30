@@ -1,0 +1,4 @@
+1.删除3.5.19版本的inc和src目录
+2.用新版本的behaviac的runtime替换integration\BattleCityDemo\Assets\Scripts\behaviac目录
+3.用新版本打开BattleCityDemo\Assets\behaviac\workspace\BattleCity.workspace.xml
+4.确定-导出全部即可
