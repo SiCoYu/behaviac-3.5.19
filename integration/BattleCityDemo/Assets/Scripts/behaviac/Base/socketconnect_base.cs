@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -341,21 +341,28 @@ namespace behaviac
                 return bytes == 0;
             }
 
-            int res = h.Send(buffer);
-
-            if (res == -1)
+            try
             {
-                outBytesWritten = 0;
+                int res = h.Send(buffer);
 
-                if (!h.Connected)
+                if (res == -1)
                 {
-                    Close(ref h);
+                    outBytesWritten = 0;
+
+                    if (!h.Connected)
+                    {
+                        Close(ref h);
+                    }
+                }
+                else
+                {
+                    outBytesWritten = res;
+                    gs_packetsSent++;
                 }
             }
-            else
+            catch (Exception ex)
             {
-                outBytesWritten = res;
-                gs_packetsSent++;
+                Debug.Log(ex.Message);
             }
 
             return outBytesWritten != 0;
@@ -517,7 +524,7 @@ namespace behaviac
     };
 
 #else
-    struct PacketCollection
+    class PacketCollection
     {
         void Init(uint) {}
         void Close() {}
@@ -557,7 +564,10 @@ namespace behaviac
                     }
                 }
 
-                m_packetQueue.Enqueue(packet);
+                lock (m_packetQueue)
+                {
+                    m_packetQueue.Enqueue(packet);
+                }
             }
         }
 
@@ -570,23 +580,11 @@ namespace behaviac
                 return true;
             }
 
-            Packet packet = m_packetQueue.Peek();
-
-            while (packet == null)
+            lock (m_packetQueue)
             {
-                m_packetQueue.Dequeue();
+                Packet packet = m_packetQueue.Peek();
 
-                if (m_packetQueue.Count == 0)
-                {
-                    break;
-                }
-
-                packet = m_packetQueue.Peek();
-            }
-
-            while (packet != null)
-            {
-                if (coll.Add(packet))
+                while (packet == null)
                 {
                     m_packetQueue.Dequeue();
 
@@ -597,9 +595,24 @@ namespace behaviac
 
                     packet = m_packetQueue.Peek();
                 }
-                else
+
+                while (packet != null)
                 {
-                    return false;
+                    if (coll.Add(packet))
+                    {
+                        m_packetQueue.Dequeue();
+
+                        if (m_packetQueue.Count == 0)
+                        {
+                            break;
+                        }
+
+                        packet = m_packetQueue.Peek();
+                    }
+                    else
+                    {
+                        return false;
+                    }
                 }
             }
 
@@ -610,24 +623,27 @@ namespace behaviac
 
         private void SendPackets(Socket h)
         {
-            Packet packet = m_packetQueue.Peek();
-
-            while (packet != null)
+            lock (m_packetQueue)
             {
-                int bytesWritten = (0);
-                bool success = SocketBase.Write(h, packet.GetData(), ref bytesWritten);
+                Packet packet = m_packetQueue.Peek();
 
-                // Failed to send data. Most probably sending too much, break and
-                // hope for the best next time
-                if (!success)
+                while (packet != null)
                 {
-                    Debug.Check(false);
-                    behaviac.Debug.LogWarning("A packet is not correctly sent...\n");
-                    break;
-                }
+                    int bytesWritten = (0);
+                    bool success = SocketBase.Write(h, packet.GetData(), ref bytesWritten);
 
-                m_packetQueue.Dequeue();	// 'Commit' pop if data sent.
-                packet = m_packetQueue.Peek();
+                    // Failed to send data. Most probably sending too much, break and
+                    // hope for the best next time
+                    if (!success)
+                    {
+                        Debug.Check(false);
+                        behaviac.Debug.LogWarning("A packet is not correctly sent...\n");
+                        break;
+                    }
+
+                    m_packetQueue.Dequeue();	// 'Commit' pop if data sent.
+                    packet = m_packetQueue.Peek();
+                }
             }
         }
 
@@ -676,7 +692,7 @@ namespace behaviac
         /// <returns>The item retrieved from the pool.</returns>
         public T Get()
         {
-            lock(locker)
+            lock (locker)
             {
                 if (queue.Count > 0)
                 {
@@ -694,7 +710,7 @@ namespace behaviac
         /// <param name="item">The item to place to the pool.</param>
         public void Put(T item)
         {
-            lock(locker)
+            lock (locker)
             {
                 if (count < size)
                 {
@@ -715,7 +731,7 @@ namespace behaviac
         /// </summary>
         public void Dispose()
         {
-            lock(locker)
+            lock (locker)
             {
                 count = 0;
 
@@ -961,7 +977,7 @@ namespace behaviac
                         }
 
 #else
-                    m_packetBuffers[i].SendPackets(m_writeSocket);
+                        m_packetBuffers[i].SendPackets(m_writeSocket);
 #endif
                     }
                 }
@@ -1064,6 +1080,7 @@ namespace behaviac
         private void ThreadFunc()
         {
             Log("behaviac: Socket Thread Starting\n");
+
             try
             {
                 this.ReserveThreadPacketBuffer();
@@ -1072,6 +1089,7 @@ namespace behaviac
 
                 bool blockingSocket = true;
                 Socket serverSocket = null;
+
                 try
                 {
                     serverSocket = SocketBase.Create(blockingSocket);
@@ -1114,6 +1132,7 @@ namespace behaviac
                     if (m_terminating.Get() == 0)
                     {
                         Log("behaviac: accepting...\n");
+
                         try
                         {
                             m_writeSocket = SocketBase.Accept(serverSocket, SocketConnection.kSocketBufferSize);
@@ -1172,7 +1191,7 @@ namespace behaviac
                         }
                         catch (Exception ex)
                         {
-                            Debug.LogError(ex.Message);
+                            Debug.LogError(ex.Message + ex.StackTrace);
                         }
                     }
                 }//while (!m_terminating)
@@ -1248,7 +1267,7 @@ namespace behaviac
         {
             if (this.IsConnected())
             {
-                lock(this)
+                lock (this)
                 {
                     text = this.ms_texts;
                     this.ms_texts = string.Empty;
@@ -1271,7 +1290,7 @@ namespace behaviac
             {
                 int retIndex = (-2);
 
-                lock(this)
+                lock (this)
                 {
                     // NOTE: This is quite naive attempt to make sure that main thread queue
                     // is the last one (rely on the fact that it's most likely to be the first
@@ -1308,6 +1327,7 @@ namespace behaviac
 
                     bufferIndex = retIndex;
                 }
+
                 //BEHAVIAC_LOGINFO("ReserveThreadPacketBuffer:%d thread %d\n", bufferIndex, id);
             }
 
@@ -1329,6 +1349,7 @@ namespace behaviac
             if (this.m_packetBuffers != null)
             {
                 int bufferIndex = this.GetBufferIndex(false);
+
                 if (bufferIndex > 0)
                 {
                     this.m_packetBuffers[bufferIndex].Clear();
@@ -1352,7 +1373,7 @@ namespace behaviac
         {
             int packetsCount = 0;
 
-            foreach(Packet p in this.m_packetPool)
+            foreach (Packet p in this.m_packetPool)
             {
                 int bytesWritten = (0);
                 SocketBase.Write(m_writeSocket, p.GetData(), ref bytesWritten);
@@ -1468,7 +1489,7 @@ namespace behaviac
                     }
                 }
 
-                lock(this)
+                lock (this)
                 {
                     m_packetBuffers = null;
                 }

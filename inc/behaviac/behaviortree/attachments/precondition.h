@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,39 +11,34 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef BEHAVIAC_BEHAVIORTREE_PRECONDITION_H
-#define BEHAVIAC_BEHAVIORTREE_PRECONDITION_H
+#ifndef _BEHAVIAC_BEHAVIORTREE_PRECONDITION_H_
+#define _BEHAVIAC_BEHAVIORTREE_PRECONDITION_H_
 
-#include "behaviac/base/base.h"
+#include "behaviac/common/base.h"
 #include "behaviac/behaviortree/behaviortree.h"
 #include "behaviac/behaviortree/behaviortree_task.h"
 #include "behaviac/property/property.h"
 #include "behaviac/behaviortree/attachments/attachaction.h"
 #include "behaviac/behaviortree/attachments/effector.h"
 
-namespace behaviac
-{
-    class BEHAVIAC_API Precondition : public AttachAction
-    {
+namespace behaviac {
+    class BEHAVIAC_API Precondition : public AttachAction {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(Precondition, AttachAction);
 
-        enum EPhase
-        {
+        enum EPhase {
             E_ENTER,
             E_UPDATE,
             E_BOTH
         };
 
-        class PreconditionConfig : public ActionConfig
-        {
+        class PreconditionConfig : public ActionConfig {
         public:
-			BEHAVIAC_DECLARE_MEMORY_OPERATORS(PreconditionConfig);
+            BEHAVIAC_DECLARE_MEMORY_OPERATORS(PreconditionConfig);
             EPhase m_phase;
             bool m_bAnd;
 
-            PreconditionConfig()
-            {
+            PreconditionConfig() {
                 m_phase = E_ENTER;
                 m_bAnd = false;
             }
@@ -55,7 +50,7 @@ namespace behaviac
         };
 
         Precondition();
-        ~Precondition();
+        virtual ~Precondition();
 
     public:
         EPhase GetPhase();

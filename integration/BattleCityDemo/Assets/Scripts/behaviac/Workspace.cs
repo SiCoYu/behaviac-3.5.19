@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -17,6 +17,14 @@
 #endif
 #endif
 
+// please define BEHAVIAC_NOT_USE_UNITY in your project file if you are not using unity
+#if !BEHAVIAC_NOT_USE_UNITY
+// if you have compiling errors complaining the following using 'UnityEngine',
+//usually, you need to define BEHAVIAC_NOT_USE_UNITY in your project file
+using UnityEngine;
+#endif//!BEHAVIAC_NOT_USE_UNITY
+
+
 using System;
 using System.IO;
 
@@ -24,17 +32,11 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 
-#if !BEHAVIAC_RELEASE || BEHAVIAC_USE_SYSTEM_XML
-
+#if BEHAVIAC_USE_SYSTEM_XML
 using System.Xml;
-
-#endif
-
-#if !BEHAVIAC_USE_SYSTEM_XML
-
+#else
 using System.Security;
-using Mono.Xml;
-
+using MiniXml;
 #endif
 
 #if UNITY_EDITOR || UNITY_STANDALONE_WIN
@@ -49,19 +51,10 @@ namespace behaviac
 
     public static class Config
     {
-#if !BEHAVIAC_CS_ONLY
-        readonly private static bool m_bIsDesktopPlayer = (UnityEngine.Application.platform == UnityEngine.RuntimePlatform.WindowsPlayer || UnityEngine.Application.platform == UnityEngine.RuntimePlatform.OSXPlayer);
-        readonly private static bool m_bIsDesktopEditor = (UnityEngine.Application.platform == UnityEngine.RuntimePlatform.WindowsEditor || UnityEngine.Application.platform == UnityEngine.RuntimePlatform.OSXPlayer);
-#else
-        readonly private static bool m_bIsDesktopPlayer = false;
-        readonly private static bool m_bIsDesktopEditor = false;
-#endif
-
         private static bool m_bProfiling = false;
 
         public static void LogInfo()
         {
-            Debug.Log(string.Format("Config::IsDesktopPlayer {0}", Config.IsDesktopPlayer ? "true" : "false"));
             Debug.Log(string.Format("Config::IsProfiling {0}", Config.IsProfiling ? "true" : "false"));
             Debug.Log(string.Format("Config::IsLogging {0}", Config.IsLogging ? "true" : "false"));
             Debug.Log(string.Format("Config::IsLoggingFlush {0}", Config.IsLoggingFlush ? "true" : "false"));
@@ -92,30 +85,6 @@ namespace behaviac
             }
         }
 
-        public static bool IsDesktopPlayer
-        {
-            get
-            {
-                return m_bIsDesktopPlayer;
-            }
-        }
-
-        public static bool IsDesktopEditor
-        {
-            get
-            {
-                return m_bIsDesktopEditor;
-            }
-        }
-
-        public static bool IsDesktop
-        {
-            get
-            {
-                return m_bIsDesktopPlayer || m_bIsDesktopEditor;
-            }
-        }
-
         public static bool IsLoggingOrSocketing
         {
             get
@@ -136,7 +105,7 @@ namespace behaviac
             get
             {
                 //logging is only enabled on pc platform, it is disabled on android, ios, etc.
-                return IsDesktop && m_bIsLogging;
+                return m_bIsLogging;
             }
             set
             {
@@ -165,7 +134,7 @@ namespace behaviac
             get
             {
                 //logging is only enabled on pc platform, it is disabled on android, ios, etc.
-                return IsDesktop && m_bIsLoggingFlush;
+                return m_bIsLoggingFlush;
             }
             set
             {
@@ -183,7 +152,7 @@ namespace behaviac
         }
 
 #if !BEHAVIAC_RELEASE
-        private static bool m_bIsSocketing = IsDesktop;
+        private static bool m_bIsSocketing = true;
 #else
         private static bool m_bIsSocketing = false;
 #endif
@@ -274,6 +243,20 @@ namespace behaviac
                 m_bIsSuppressingNonPublicWarning = value;
             }
         }
+
+        private static bool m_bPreloadBehaviors = true;
+
+        public static bool PreloadBehaviors
+        {
+            get
+            {
+                return m_bPreloadBehaviors;
+            }
+            set
+            {
+                m_bPreloadBehaviors = value;
+            }
+        }
     }
 
     #endregion Config
@@ -335,12 +318,13 @@ namespace behaviac
             }
         }
 
-        private static string GetDefaultExportPath()
+        private static string GetDefaultFilePath()
         {
             string path = "";
 
-#if !BEHAVIAC_CS_ONLY
+#if !BEHAVIAC_NOT_USE_UNITY
             string relativePath = "/Resources/behaviac/exported";
+
             if (UnityEngine.Application.platform == UnityEngine.RuntimePlatform.WindowsEditor)
             {
                 path = UnityEngine.Application.dataPath + relativePath;
@@ -353,28 +337,43 @@ namespace behaviac
             {
                 path = "Assets" + relativePath;
             }
+
 #endif
 
             return path;
         }
 
-        private string m_workspaceExportPath = null;
+        private string m_filePath = null;
 
         //read from 'WorkspaceFile', prepending with 'WorkspacePath', relative to the exe's path
         public string FilePath
         {
             get
             {
-                if (string.IsNullOrEmpty(m_workspaceExportPath))
+                if (string.IsNullOrEmpty(m_filePath))
                 {
-                    m_workspaceExportPath = GetDefaultExportPath();
+                    m_filePath = GetDefaultFilePath();
                 }
 
-                return this.m_workspaceExportPath;
+                return this.m_filePath;
             }
             set
             {
-                this.m_workspaceExportPath = value;
+                this.m_filePath = value;
+            }
+        }
+
+        private string m_metaFile = null;
+
+        public string MetaFile
+        {
+            get
+            {
+                return this.m_metaFile;
+            }
+            set
+            {
+                this.m_metaFile = value;
             }
         }
 
@@ -387,7 +386,7 @@ namespace behaviac
         {
             get
             {
-#if !BEHAVIAC_CS_ONLY
+#if !BEHAVIAC_NOT_USE_UNITY
                 return (m_frameSinceStartup < 0) ? UnityEngine.Time.frameCount : m_frameSinceStartup;
 #else
                 return m_frameSinceStartup;
@@ -400,30 +399,102 @@ namespace behaviac
             }
         }
 
+        private bool _useIntValue = false;
+        public bool UseIntValue
+        {
+            get
+            {
+                return _useIntValue;
+            }
+            set
+            {
+                _useIntValue = value;
+            }
+        }
 
-        private double m_timeSinceStartup = -1.0;
-        //
-        // Summary:
-        //     The real time in seconds since the game started (Read Only).
+        private double m_doubleValueSinceStartup = -1.0;
+
+        // Deprecated property, use DoubleValueSinceStartup insteadly.
         public virtual double TimeSinceStartup
         {
             get
             {
-#if !BEHAVIAC_CS_ONLY
-                if (this.m_timeSinceStartup >= 0.0)
+                Debug.Check(!UseIntValue);
+
+#if !BEHAVIAC_NOT_USE_UNITY
+
+                if (this.m_doubleValueSinceStartup >= 0)
                 {
-                    return this.m_timeSinceStartup;
+                    return this.m_doubleValueSinceStartup * 0.001;
                 }
 
                 return UnityEngine.Time.realtimeSinceStartup;
 #else
-                return this.m_timeSinceStartup;
+                return this.m_doubleValueSinceStartup * 0.001;
 #endif
             }
 
             set
             {
-                this.m_timeSinceStartup = value;
+                Debug.Check(!UseIntValue);
+
+                this.m_doubleValueSinceStartup = value * 1000;
+            }
+        }
+
+        public virtual double DoubleValueSinceStartup
+        {
+            get
+            {
+                Debug.Check(!UseIntValue);
+
+#if !BEHAVIAC_NOT_USE_UNITY
+
+                if (this.m_doubleValueSinceStartup >= 0)
+                {
+                    return this.m_doubleValueSinceStartup;
+                }
+
+                return UnityEngine.Time.realtimeSinceStartup * 1000;
+#else
+                return this.m_doubleValueSinceStartup;
+#endif
+            }
+
+            set
+            {
+                Debug.Check(!UseIntValue);
+
+                this.m_doubleValueSinceStartup = value;
+            }
+        }
+
+        private long m_intValueSinceStartup = -1;
+
+        public virtual long IntValueSinceStartup
+        {
+            get
+            {
+                Debug.Check(UseIntValue);
+
+#if !BEHAVIAC_NOT_USE_UNITY
+
+                if (this.m_intValueSinceStartup >= 0)
+                {
+                    return this.m_intValueSinceStartup;
+                }
+
+                return (long)(UnityEngine.Time.realtimeSinceStartup * 1000);
+#else
+                return this.m_intValueSinceStartup;
+#endif
+            }
+
+            set
+            {
+                Debug.Check(UseIntValue);
+
+                this.m_intValueSinceStartup = value;
             }
         }
 
@@ -497,13 +568,18 @@ namespace behaviac
         private bool m_bInited = false;
         internal bool IsInited
         {
-            get { return m_bInited; }
+            get
+            {
+                return m_bInited;
+            }
         }
 
         public bool TryInit()
         {
             if (this.m_bInited)
+            {
                 return true;
+            }
 
             this.m_bInited = true;
 
@@ -530,14 +606,16 @@ namespace behaviac
 
 #if !BEHAVIAC_RELEASE
             this.m_workspaceExportPathAbs = Path.GetFullPath(this.FilePath).Replace('\\', '/');
+
             if (!this.m_workspaceExportPathAbs.EndsWith("/"))
             {
                 this.m_workspaceExportPathAbs += '/';
             }
 
 #if BEHAVIAC_HOTRELOAD
+
             // set the file watcher
-            if (Config.IsDesktop && behaviac.Config.IsHotReload)
+            if (behaviac.Config.IsHotReload)
             {
                 if (this.FileFormat != EFileFormat.EFF_cs)
                 {
@@ -558,7 +636,10 @@ namespace behaviac
                         filter = "*.bson.bytes";
                     }
 
-                    m_DirectoryMonitor.Start(this.FilePath, filter);
+                    if (File.Exists(this.FilePath))
+                    {
+                        m_DirectoryMonitor.Start(this.FilePath, filter);
+                    }
                 }
             }
 
@@ -566,6 +647,7 @@ namespace behaviac
 
             //LogWorkspaceInfo();
 #endif
+
             if (Config.IsSocketing)
             {
                 bool isBlockSocket = Config.IsSocketBlocking;
@@ -595,6 +677,7 @@ namespace behaviac
             Context.Cleanup(-1);
 
 #if BEHAVIAC_HOTRELOAD
+
             if (behaviac.Config.IsHotReload)
             {
                 m_modifiedFiles.Clear();
@@ -606,6 +689,7 @@ namespace behaviac
                     m_DirectoryMonitor = null;
                 }
             }
+
 #endif
 
 #if BEHAVIAC_USE_HTN
@@ -626,9 +710,9 @@ namespace behaviac
 
                 AgentMeta.Register();
 
-#if !BEHAVIAC_RELEASE
-                this.RegisterMetas();
-#endif
+                //#if !BEHAVIAC_RELEASE
+                //                this.RegisterMetas();
+                //#endif
             }
         }
 
@@ -637,9 +721,9 @@ namespace behaviac
             Debug.Check(this.m_bRegistered);
 
             this.UnRegisterBehaviorNode();
-#if !BEHAVIAC_RELEASE
-            this.UnRegisterMetas();
-#endif
+            //#if !BEHAVIAC_RELEASE
+            //            this.UnRegisterMetas();
+            //#endif
 
             AgentMeta.UnRegister();
 
@@ -655,7 +739,7 @@ namespace behaviac
             LogManager.Instance.LogWorkspace(msg);
 
             Workspace.EFileFormat format = this.FileFormat;
-            string formatString = (format == Workspace.EFileFormat.EFF_xml ? "xml" : "bson");
+            string formatString = (format == Workspace.EFileFormat.EFF_bson ? "bson.bytes" : (format == Workspace.EFileFormat.EFF_cs ? "cs" : "xml"));
 
             msg = string.Format("[workspace] {0} \"{1}\"\n", formatString, "");
             LogManager.Instance.LogWorkspace(msg);
@@ -797,6 +881,7 @@ namespace behaviac
                 DateTime now = DateTime.Now;
 
                 var e = events.GetEnumerator();
+
                 while (e.MoveNext())
                 {
                     // If the path has not received a new event in the last 75ms
@@ -863,6 +948,7 @@ namespace behaviac
                     if (pos != -1)
                     {
                         filename = filename.Substring(m_workspaceExportPathAbs.Length + pos);
+
                         lock (m_ModifiedFiles)
                         {
                             if (!m_ModifiedFiles.Contains(filename))
@@ -905,7 +991,8 @@ namespace behaviac
         protected void HotReload()
         {
 #if !BEHAVIAC_RELEASE
-            if (Config.IsDesktop && behaviac.Config.IsHotReload)
+
+            if (behaviac.Config.IsHotReload)
             {
                 if (GetModifiedFiles())
                 {
@@ -1121,22 +1208,26 @@ namespace behaviac
                 string varName = varNameValue.Substring(0, posb);
                 string varValue = varNameValue.Substring(posb + 2, size);
 
-                if (!System.Object.ReferenceEquals(pAgent, null))
+                // If pAgent.name is "null", pAgent != null will return false.
+                if (pAgent != null && !System.Object.ReferenceEquals(pAgent, null))
                 {
                     pAgent.SetVariableFromString(varName, varValue);
                 }//end of if (pAgent)
             }
-
 #endif
         }
+
+        private int m_frame = 0;
 
         protected void LogFrames()
         {
 #if !BEHAVIAC_RELEASE
+
             if (Config.IsLoggingOrSocketing)
             {
-                LogManager.Instance.Log("[frame]{0}\n", this.FrameSinceStartup);
+                LogManager.Instance.Log("[frame]{0}\n", (this.FrameSinceStartup >= 0) ? this.FrameSinceStartup : (this.m_frame++));
             }
+
 #endif
         }
 
@@ -1475,10 +1566,10 @@ namespace behaviac
         /**
         Load the specified behavior tree
 
-        the workspace export path is provided by Workspace::GetWorkspaceExportPath
-        the file format(xml/bson) is provided by Workspace::GetFileFormat
+        the workspace export path is provided by Workspace.FilePath
+        the file format(xml/bson) is provided by Workspace.FileFormat
 
-        generally, you need to derive Workspace and override GetWorkspaceExportPath and GetFileFormat,
+        generally, you need to derive Workspace and override FilePath and FileFormat,
         then, instantiate your derived Workspace at the very beginning
 
         @param relativePath
@@ -1506,6 +1597,7 @@ namespace behaviac
             }
 
             string fullPath = Path.Combine(this.FilePath, relativePath);
+            fullPath = fullPath.Replace('\\', '/');
 
             string ext = "";
             EFileFormat f = this.FileFormat;
@@ -1554,7 +1646,7 @@ namespace behaviac
                 }
                 else
                 {
-                    Debug.LogError(string.Format("'{0}' doesn't exist!, Please override Workspace and its GetWorkspaceExportPath()", fullPath));
+                    Debug.LogError(string.Format("'{0}' doesn't exist!, Please set Workspace.FilePath", fullPath));
                     Debug.Check(false);
                 }
             }
@@ -1790,7 +1882,7 @@ namespace behaviac
                     BTItem_t btItem = m_allBehaviorTreeTasks[behaviorTreeTask.GetName()];
                     btItem.bts.Remove(behaviorTreeTask);
 
-                    if (agent != null)
+                    if (!System.Object.ReferenceEquals(agent, null))
                     {
                         btItem.agents.Remove(agent);
                     }
@@ -1849,899 +1941,6 @@ namespace behaviac
             return null;
         }
 
-        #region ExportMeta
-#if !BEHAVIAC_RELEASE
-        private string GetFullTypeName(Type type, bool isValue = false)
-        {
-            string baseTypeName = Utils.GetNativeTypeName(type);
-
-            if (Utils.IsEnumType(type) || Utils.IsCustomClassType(type))
-            {
-                //if (type.DeclaringType != null)
-                //{
-                //    string declaringType = type.DeclaringType.Name.Replace(".", "::");
-                //    baseTypeName = string.Format("{0}::{1}", declaringType, baseTypeName);
-                //}
-
-                //if (!string.IsNullOrEmpty(type.Namespace))
-                //{
-                //    baseTypeName = string.Format("{0}::{1}", type.Namespace.Replace(".", "::"), baseTypeName);
-                //}
-                baseTypeName = baseTypeName.Replace(".", "::");
-                baseTypeName = baseTypeName.Replace("+", "::");
-
-                if (isValue && Utils.IsRefNullType(type))
-                {
-                    baseTypeName += "*";
-                }
-            }
-            else if (Utils.IsArrayType(type))
-            {
-                Type elementType = type.GetGenericArguments()[0];
-                baseTypeName = string.Format("vector<{0}>", GetFullTypeName(elementType, isValue));
-            }
-
-            return baseTypeName;
-        }
-
-        private bool IsMemberPublic(MemberInfo m)
-        {
-            FieldInfo field = m as FieldInfo;
-
-            if (field != null)
-            {
-                return field.IsPublic || field.IsAssembly;
-            }
-
-            PropertyInfo f = m as PropertyInfo;
-            MethodInfo getter = f.GetGetMethod();
-
-            if (getter != null)
-            {
-                return getter.IsPublic || getter.IsAssembly;
-            }
-            else
-            {
-                MethodInfo setter = f.GetSetMethod();
-
-                if (setter != null)
-                {
-                    return setter.IsPublic || setter.IsAssembly;
-                }
-            }
-
-            return true;
-        }
-
-        private bool IsMemberStatic(MemberInfo m)
-        {
-            FieldInfo field = m as FieldInfo;
-
-            if (field != null)
-            {
-                return field.IsStatic;
-            }
-
-            PropertyInfo f = m as PropertyInfo;
-            MethodInfo getter = f.GetGetMethod(false);
-
-            if (getter != null)
-            {
-                return getter.IsStatic;
-            }
-            else
-            {
-                MethodInfo setter = f.GetSetMethod(false);
-
-                if (setter != null)
-                {
-                    return setter.IsStatic;
-                }
-            }
-
-            return true;
-        }
-
-        private bool IsMemberReadonly(MemberInfo m)
-        {
-            FieldInfo field = m as FieldInfo;
-
-            if (field != null)
-            {
-                return field.IsInitOnly || field.IsLiteral;
-            }
-
-            PropertyInfo f = m as PropertyInfo;
-            MethodInfo getter = f.GetGetMethod(false);
-
-            if (getter != null)
-            {
-                MethodInfo setter = f.GetSetMethod(false);
-
-                if (setter == null)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private void CollectStructTypeField(Dictionary<string, Type> types, Type type, bool onlyExportPublicMembers)
-        {
-            if (!Utils.IsAgentType(type) && Utils.IsCustomClassType(type))
-            {
-                string typeFullName = GetFullTypeName(type);
-
-                if (!types.ContainsKey(typeFullName))
-                {
-                    types.Add(typeFullName, type);
-
-                    if (!Utils.IsRefNullType(type))
-                    {
-                        CollectType(types, type, false, onlyExportPublicMembers);
-                    }
-                }
-            }
-        }
-
-        private void CollectEnumTypeField(Dictionary<string, Type> types, Type type)
-        {
-            if (Utils.IsEnumType(type))
-            {
-                string typeFullName = GetFullTypeName(type);
-
-                if (!types.ContainsKey(typeFullName))
-                {
-                    types.Add(typeFullName, type);
-                }
-            }
-        }
-
-        private static BindingFlags GetMemberBindingFlags()
-        {
-            BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
-            return bindingFlags;
-        }
-
-        private void CollectType(Dictionary<string, Type> types, Type type, bool bIsAgentType, bool onlyExportPublicMembers)
-        {
-            BindingFlags bindingFlags = GetMemberBindingFlags();
-
-            // members
-            CollectFields(types, type, bIsAgentType, onlyExportPublicMembers, bindingFlags);
-            CollectProperties(types, type, bIsAgentType, onlyExportPublicMembers, bindingFlags);
-
-            // methods
-            if (bIsAgentType)
-            {
-                MethodInfo[] methods = type.GetMethods(bindingFlags);
-
-                for (int i = 0; i < methods.Length; ++i)
-                {
-                    MethodInfo m = methods[i];
-                    Attribute[] attributes = (Attribute[])m.GetCustomAttributes(typeof(behaviac.MethodMetaInfoAttribute), false);
-
-                    if (attributes.Length > 0)
-                    {
-                        CollectMethod(types, m, null, onlyExportPublicMembers);
-                    }
-                }
-            }
-        }
-
-        private void CollectFields(Dictionary<string, Type> types, Type type, bool bIsAgentType, bool onlyExportPublicMembers, BindingFlags bindingFlags)
-        {
-            FieldInfo[] fields = type.GetFields(bindingFlags);
-
-            for (int i = 0; i < fields.Length; ++i)
-            {
-                FieldInfo f = fields[i];
-                CollectMember(types, type, bIsAgentType, onlyExportPublicMembers, f, f.FieldType);
-            }
-        }
-
-        private void CollectProperties(Dictionary<string, Type> types, Type type, bool bIsAgentType, bool onlyExportPublicMembers, BindingFlags bindingFlags)
-        {
-            PropertyInfo[] properties = type.GetProperties(bindingFlags);
-
-            for (int i = 0; i < properties.Length; ++i)
-            {
-                PropertyInfo p = properties[i];
-                Attribute[] attributes = (Attribute[])p.GetCustomAttributes(typeof(behaviac.MemberMetaInfoAttribute), false);
-
-                if (attributes.Length > 0)
-                {
-                    CollectMember(types, type, bIsAgentType, onlyExportPublicMembers, p, p.PropertyType);
-                }
-            }
-        }
-
-        private void CollectMember(Dictionary<string, Type> types, Type type, bool bIsAgentType, bool onlyExportPublicMembers, MemberInfo m, Type memberType)
-        {
-            if (bIsAgentType)
-            {
-                Attribute[] attributes = (Attribute[])m.GetCustomAttributes(typeof(behaviac.MemberMetaInfoAttribute), false);
-
-                if (attributes.Length == 0)
-                {
-                    return;
-                }
-            }
-
-            if (onlyExportPublicMembers && !IsMemberPublic(m))
-            {
-                return;
-            }
-
-            if (Utils.IsArrayType(memberType))
-            {
-                Type elementType = memberType.GetGenericArguments()[0];
-
-                if (Utils.IsCustomClassType(elementType))   // struct
-                {
-                    CollectStructTypeField(types, elementType, onlyExportPublicMembers);
-                }
-                else if (Utils.IsEnumType(elementType))     // enum
-                {
-                    CollectEnumTypeField(types, elementType);
-                }
-            }
-            else if (Utils.IsCustomClassType(memberType))   // struct
-            {
-                CollectStructTypeField(types, memberType, onlyExportPublicMembers);
-            }
-            else if (Utils.IsEnumType(memberType))          // enum
-            {
-                CollectEnumTypeField(types, memberType);
-            }
-        }
-
-        private void CollectMethod(Dictionary<string, Type> types, MethodInfo m, string eventName, bool onlyExportPublicMembers)
-        {
-            if (onlyExportPublicMembers && !m.IsPublic)
-            {
-                return;
-            }
-
-            //TODO:IsActionMethodOnly
-
-            ParameterInfo[] parameters = m.GetParameters();
-
-            for (int i = 0; i < parameters.Length; ++i)
-            {
-                ParameterInfo para = parameters[i];
-                Type paramType = para.ParameterType;
-
-                if (para.ParameterType.IsByRef)
-                {
-                    paramType = para.ParameterType.GetElementType();
-                }
-
-                if (Utils.IsArrayType(paramType))
-                {
-                    Type elementType = paramType.GetGenericArguments()[0];
-
-                    if (Utils.IsCustomClassType(elementType))
-                    {
-                        CollectStructTypeField(types, elementType, onlyExportPublicMembers);
-                    }
-                    else if (Utils.IsEnumType(elementType))
-                    {
-                        CollectEnumTypeField(types, elementType);
-                    }
-                }
-                else if (Utils.IsCustomClassType(paramType))
-                {
-                    CollectStructTypeField(types, paramType, onlyExportPublicMembers);
-                }
-                else if (Utils.IsEnumType(paramType))
-                {
-                    CollectEnumTypeField(types, paramType);
-                }
-            }
-
-            Type returnType = m.ReturnType;
-
-            if (Utils.IsArrayType(returnType))
-            {
-                Type elementType = returnType.GetGenericArguments()[0];
-
-                if (Utils.IsCustomClassType(elementType))
-                {
-                    CollectStructTypeField(types, elementType, onlyExportPublicMembers);
-                }
-                else if (Utils.IsEnumType(elementType))
-                {
-                    CollectEnumTypeField(types, elementType);
-                }
-            }
-            else if (Utils.IsCustomClassType(returnType))
-            {
-                CollectStructTypeField(types, returnType, onlyExportPublicMembers);
-            }
-            else if (Utils.IsEnumType(returnType))
-            {
-                CollectEnumTypeField(types, returnType);
-            }
-        }
-#endif//BEHAVIAC_RELEASE
-
-#if !BEHAVIAC_RELEASE
-
-        private void ExportStructTypeField(XmlWriter xmlWriter, Type type, bool onlyExportPublicMembers)
-        {
-            if (!Utils.IsAgentType(type) && Utils.IsCustomClassType(type))
-            {
-                string displayName = type.Name;
-                string desc = displayName;
-
-                Attribute[] attributes = (Attribute[])type.GetCustomAttributes(typeof(behaviac.TypeMetaInfoAttribute), false);
-                ERefType refType = ERefType.ERT_Undefined;
-
-                if (attributes.Length > 0)
-                {
-                    behaviac.TypeMetaInfoAttribute cda = (behaviac.TypeMetaInfoAttribute)attributes[0];
-
-                    if (!string.IsNullOrEmpty(cda.DisplayName))
-                    {
-                        displayName = cda.DisplayName;
-                    }
-
-                    if (!string.IsNullOrEmpty(cda.Description))
-                    {
-                        desc = cda.Description;
-                    }
-
-                    refType = cda.RefType;
-                }
-
-                string typeFullName = GetFullTypeName(type);
-
-                xmlWriter.WriteStartElement("struct");
-
-                xmlWriter.WriteAttributeString("Type", typeFullName);
-                xmlWriter.WriteAttributeString("DisplayName", displayName);
-                xmlWriter.WriteAttributeString("Desc", desc);
-
-
-                bool bIsRefType = type.IsClass;
-                if (refType == ERefType.ERT_ValueType)
-                {
-                    bIsRefType = false;
-                }
-                else
-                {
-                    //if refType is undefined, a class is a ref type while a struct is a value type 
-                }
-
-                xmlWriter.WriteAttributeString("IsRefType", bIsRefType ? "true" : "false");
-
-                // members
-                //if (!Utils.IsRefNullType(type))
-                if (!bIsRefType)
-                {
-                    ExportType(xmlWriter, type, false, onlyExportPublicMembers);
-                }
-
-                xmlWriter.WriteEndElement();
-            }
-        }
-
-        private void ExportEnumTypeField(XmlWriter xmlWriter, Type type)
-        {
-            if (Utils.IsEnumType(type))
-            {
-                string displayName = type.Name;
-                string desc = displayName;
-
-                Attribute[] attributes = (Attribute[])type.GetCustomAttributes(typeof(behaviac.TypeMetaInfoAttribute), false);
-
-                if (attributes.Length > 0)
-                {
-                    behaviac.TypeMetaInfoAttribute eda = (behaviac.TypeMetaInfoAttribute)attributes[0];
-                    displayName = eda.DisplayName;
-                    desc = eda.Description;
-                }
-
-                string typeFullName = GetFullTypeName(type);
-
-                xmlWriter.WriteStartElement("enumtype");
-                xmlWriter.WriteAttributeString("Type", typeFullName);
-                xmlWriter.WriteAttributeString("DisplayName", displayName);
-                xmlWriter.WriteAttributeString("Desc", desc);
-
-                string[] names = type.FullName.Split(new char[] { '.', '+' }, StringSplitOptions.RemoveEmptyEntries);
-                string ns = string.Empty;
-
-                for (int i = 0; i < names.Length - 1; ++i)
-                {
-                    ns += names[i] + "::";
-                }
-
-                Array list = Enum.GetValues(type);
-                var e = list.GetEnumerator();
-                while (e.MoveNext())
-                {
-                    string value = Enum.GetName(type, e.Current);
-
-                    xmlWriter.WriteStartElement("enum");
-                    xmlWriter.WriteAttributeString("NativeValue", ns + value);
-                    xmlWriter.WriteAttributeString("Value", value);
-                    xmlWriter.WriteAttributeString("DisplayName", behaviac.MemberMetaInfoAttribute.GetEnumDisplayName(e.Current));
-                    xmlWriter.WriteAttributeString("Desc", behaviac.MemberMetaInfoAttribute.GetEnumDescription(e.Current));
-
-                    //end of enum
-                    xmlWriter.WriteEndElement();
-                }
-
-                //end of enumtype
-                xmlWriter.WriteEndElement();
-            }
-        }
-
-        private void ExportType(XmlWriter xmlWriter, Type type, bool bIsAgentType, bool onlyExportPublicMembers)
-        {
-            BindingFlags bindingFlags = GetMemberBindingFlags();
-            
-            ExportFields(xmlWriter, type, bIsAgentType, onlyExportPublicMembers, bindingFlags);
-            ExportProperties(xmlWriter, type, bIsAgentType, onlyExportPublicMembers, bindingFlags);
-
-            if (bIsAgentType)
-            {
-                List<string> exportedMethods = new List<string>();
-
-                MethodInfo[] methods = type.GetMethods(bindingFlags);
-                for (int i = 0; i < methods.Length; ++i)
-                {
-                    MethodInfo m = methods[i];
-                    Attribute[] attributes = (Attribute[])m.GetCustomAttributes(typeof(behaviac.MethodMetaInfoAttribute), false);
-
-                    if (attributes.Length > 0)
-                    {
-                        behaviac.MethodMetaInfoAttribute methodDesc = (behaviac.MethodMetaInfoAttribute)attributes[0];
-
-                        ExportMethod(xmlWriter, m, methodDesc, onlyExportPublicMembers);
-
-                        if (exportedMethods.Contains(m.Name))
-                        {
-                            string info = string.Format("There are more than one method with the same name {0} in class {1}.", m.Name, m.DeclaringType.Name);
-                            Debug.LogError(info);
-                        }
-                        else
-                        {
-                            exportedMethods.Add(m.Name);
-                        }
-                    }
-                }
-            }
-        }
-
-        private void ExportFields(XmlWriter xmlWriter, Type type, bool bIsAgentType, bool onlyExportPublicMembers, BindingFlags bindingFlags)
-        {
-            FieldInfo[] fields = type.GetFields(bindingFlags);
-
-            for (int i = 0; i < fields.Length; ++i)
-            {
-                FieldInfo f = fields[i];
-                ExportMember(xmlWriter, type, bIsAgentType, onlyExportPublicMembers, f, f.FieldType);
-            }
-        }
-
-        private void ExportProperties(XmlWriter xmlWriter, Type type, bool bIsAgentType, bool onlyExportPublicMembers, BindingFlags bindingFlags)
-        {
-            PropertyInfo[] properties = type.GetProperties(bindingFlags);
-
-            for (int i = 0; i < properties.Length; ++i)
-            {
-                PropertyInfo p = properties[i];
-                Attribute[] attributes = (Attribute[])p.GetCustomAttributes(typeof(behaviac.MemberMetaInfoAttribute), false);
-
-                if (attributes.Length > 0)
-                {
-                    ExportMember(xmlWriter, type, bIsAgentType, onlyExportPublicMembers, p, p.PropertyType);
-                }
-            }
-        }
-
-        private void ExportMember(XmlWriter xmlWriter, Type type, bool bIsAgentType, bool onlyExportPublicMembers, MemberInfo m, Type memberType)
-        {
-            bool bReadonly = false;
-            string displayName = m.Name;
-            string desc = displayName;
-            string classFullName = GetFullTypeName(type);
-
-            if (bIsAgentType)
-            {
-                Attribute[] attributes = (Attribute[])m.GetCustomAttributes(typeof(behaviac.MemberMetaInfoAttribute), false);
-
-                if (attributes.Length > 0)
-                {
-                    behaviac.MemberMetaInfoAttribute memberDesc = (behaviac.MemberMetaInfoAttribute)attributes[0];
-
-                    displayName = memberDesc.DisplayName;
-                    desc = memberDesc.Description;
-                    bReadonly = memberDesc.IsReadonly;
-                }
-                else
-                {
-                    //skip those members which are not decorated by MemberDescAttribute
-                    return;
-                }
-            }
-
-            if (!IsMemberPublic(m))
-            {
-                if (!Config.IsSuppressingNonPublicWarning)
-                {
-                    string warningInfo = string.Format("Export non-public property : {0}.{1}", m.DeclaringType.Name, m.Name);
-                    Debug.LogWarning(warningInfo);
-                }
-
-                if (onlyExportPublicMembers)
-                {
-                    return;
-                }
-            }
-
-            string memberTypeStr = GetFullTypeName(memberType, true);
-
-            xmlWriter.WriteStartElement("Member");
-
-            xmlWriter.WriteAttributeString("Name", m.Name);
-            xmlWriter.WriteAttributeString("DisplayName", displayName);
-            xmlWriter.WriteAttributeString("Desc", desc);
-            xmlWriter.WriteAttributeString("Type", memberTypeStr);
-            xmlWriter.WriteAttributeString("Class", classFullName);
-
-            if (bReadonly || IsMemberReadonly(m))
-            {
-                xmlWriter.WriteAttributeString("Readonly", "true");
-            }
-
-            if (IsMemberStatic(m))
-            {
-                xmlWriter.WriteAttributeString("Static", "true");
-            }
-
-            if (IsMemberPublic(m))
-            {
-                xmlWriter.WriteAttributeString("Public", "true");
-            }
-
-            //end of Member
-            xmlWriter.WriteEndElement();
-        }
-
-        private void ExportMethod(XmlWriter xmlWriter, MethodInfo m, behaviac.MethodMetaInfoAttribute methodDesc, bool onlyExportPublicMembers)
-        {
-            if (!m.IsPublic)
-            {
-                if (!Config.IsSuppressingNonPublicWarning)
-                {
-                    string warningInfo = string.Format("Export non-public method : {0}.{1}()", m.DeclaringType.Name, m.Name);
-                    Debug.LogWarning(warningInfo);
-                }
-
-                if (onlyExportPublicMembers)
-                {
-                    return;
-                }
-            }
-
-            Type returnType = m.ReturnType;
-            Type parentClassType = m.DeclaringType;
-
-            string parentClassTypeFullName = GetFullTypeName(parentClassType);
-
-            //if (returnType == typeof (void))
-            //{
-            //    Debug.Check(true);
-            //}
-
-            string returnTypeStr = GetFullTypeName(returnType, true);
-
-            xmlWriter.WriteStartElement("Method");
-
-            xmlWriter.WriteAttributeString("Name", m.Name);
-            xmlWriter.WriteAttributeString("DisplayName", methodDesc.DisplayName);
-            xmlWriter.WriteAttributeString("Desc", methodDesc.Description);
-            xmlWriter.WriteAttributeString("ReturnType", returnTypeStr);
-            xmlWriter.WriteAttributeString("Class", parentClassTypeFullName);
-
-            if (m.IsStatic)
-            {
-                xmlWriter.WriteAttributeString("Static", "true");
-            }
-
-            if (m.IsPublic || m.IsAssembly)
-            {
-                xmlWriter.WriteAttributeString("Public", "true");
-            }
-
-            //TODO:IsActionMethodOnly
-
-            ParameterInfo[] parameters = m.GetParameters();
-
-            for (int i = 0; i < parameters.Length; ++i)
-            {
-                ParameterInfo para = parameters[i];
-                Attribute[] paramAttributes = (Attribute[])para.GetCustomAttributes(typeof(behaviac.ParamMetaInfoAttribute), false);
-
-                Type paramType = para.ParameterType;
-
-                if (para.ParameterType.IsByRef)
-                {
-                    paramType = para.ParameterType.GetElementType();
-                }
-
-                string paramNativeType = GetFullTypeName(paramType, true);
-                string paramDisplayName = para.Name;
-                string paramDescription = paramDisplayName;
-                string defaultValue = "";
-                float rangeMin = float.MinValue;
-                float rangeMax = float.MaxValue;
-
-                if (paramAttributes.Length > 0)
-                {
-                    behaviac.ParamMetaInfoAttribute paramDescAttr = ((behaviac.ParamMetaInfoAttribute)paramAttributes[0]);
-                    paramDisplayName = paramDescAttr.DisplayName;
-                    paramDescription = paramDescAttr.Description;
-                    defaultValue = paramDescAttr.DefaultValue;
-                    rangeMin = paramDescAttr.RangeMin;
-                    rangeMax = paramDescAttr.RangeMax;
-                }
-
-                if (!Utils.IsRefNullType(para.ParameterType) && para.ParameterType.IsByRef)
-                {
-                    paramNativeType += "&";
-                }
-
-                xmlWriter.WriteStartElement("Param");
-                xmlWriter.WriteAttributeString("DisplayName", paramDisplayName);
-                xmlWriter.WriteAttributeString("Desc", paramDescription);
-                xmlWriter.WriteAttributeString("Type", paramNativeType);
-
-                if (para.ParameterType.IsByRef)
-                {
-                    if (para.IsOut)
-                    {
-                        xmlWriter.WriteAttributeString("IsOut", "true");
-                    }
-
-                    else
-                    {
-                        xmlWriter.WriteAttributeString("IsRef", "true");
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(defaultValue))
-                {
-                    xmlWriter.WriteAttributeString("Default", defaultValue);
-                }
-
-                if (rangeMin != float.MinValue)
-                {
-                    xmlWriter.WriteAttributeString("RangeMin", rangeMin.ToString());
-                }
-
-                if (rangeMax != float.MaxValue)
-                {
-                    xmlWriter.WriteAttributeString("RangeMax", rangeMax.ToString());
-                }
-
-                //end of Param
-                xmlWriter.WriteEndElement();
-            }
-
-            //end of Method
-            xmlWriter.WriteEndElement();
-        }
-
-        private void ExportInstanceNames(XmlWriter xmlWriter)
-        {
-            if (Agent.Names.Count > 0)
-            {
-                xmlWriter.WriteStartElement("instances");
-
-                var e = Agent.Names.Values.GetEnumerator();
-                while (e.MoveNext())
-                {
-                    xmlWriter.WriteStartElement("instance");
-
-                    xmlWriter.WriteAttributeString("name", e.Current.instantceName_.Replace(".", "::"));
-                    xmlWriter.WriteAttributeString("class", e.Current.className_.Replace(".", "::"));
-                    xmlWriter.WriteAttributeString("DisplayName", e.Current.displayName_);
-                    xmlWriter.WriteAttributeString("Desc", e.Current.desc_);
-
-                    xmlWriter.WriteEndElement();
-                }
-
-                xmlWriter.WriteEndElement();
-            }
-        }
-
-        private string DataPath
-        {
-            get
-            {
-                string path = "";
-
-#if !BEHAVIAC_CS_ONLY
-                if (UnityEngine.Application.platform == UnityEngine.RuntimePlatform.WindowsEditor)
-                {
-                    path = UnityEngine.Application.dataPath;
-                }
-                else if (UnityEngine.Application.platform == UnityEngine.RuntimePlatform.WindowsPlayer)
-                {
-                    path = UnityEngine.Application.dataPath;
-                }
-                else
-                {
-                    behaviac.Debug.LogWarning("only for dev!");
-                    behaviac.Debug.Check(false);
-                }
-#endif
-
-                return path;
-            }
-        }
-
-#endif//BEHAVIAC_RELEASE
-
-        public bool ExportMetas(string xmlMetaFilePath, bool onlyExportPublicMembers)
-        {
-#if !BEHAVIAC_RELEASE
-            string filePath = null;
-
-            if (Path.IsPathRooted(xmlMetaFilePath))
-            {
-                filePath = xmlMetaFilePath;
-            }
-            else
-            {
-                filePath = Path.Combine(this.DataPath, xmlMetaFilePath);
-            }
-
-#if !BEHAVIAC_CS_ONLY
-            if (Config.IsDesktopEditor)
-#endif
-            {
-                RegisterMetas();
-
-                try
-                {
-                    // export to the file
-                    System.Text.Encoding utf8WithoutBom = new System.Text.UTF8Encoding(false);
-                    using (StreamWriter file = new StreamWriter(filePath, false, utf8WithoutBom))
-                    {
-                        Debug.Log(string.Format("'{0}' exported", filePath));
-
-                        XmlWriterSettings ws = new XmlWriterSettings();
-                        ws.Indent = true;
-                        //ws.OmitXmlDeclaration = true;
-
-                        using (XmlWriter xmlWriter = XmlWriter.Create(file, ws))
-                        {
-                            xmlWriter.WriteStartDocument();
-                            xmlWriter.WriteComment("EXPORTED BY TOOL, DON'T MODIFY IT!");
-
-                            xmlWriter.WriteStartElement("metas");
-                            xmlWriter.WriteAttributeString("version", "5");
-                            xmlWriter.WriteAttributeString("language", "cs");
-
-                            // export all types
-                            xmlWriter.WriteStartElement("types");
-
-                            // export all enums
-                            var e = m_registerTypes.GetEnumerator();
-                            while (e.MoveNext())
-                            {
-                                if (Utils.IsEnumType(e.Current.Value))
-                                {
-                                    ExportEnumTypeField(xmlWriter, e.Current.Value);
-                                }
-                            }
-
-                            // export all structs
-                            e = m_registerTypes.GetEnumerator();
-                            while (e.MoveNext())
-                            {
-                                if (Utils.IsCustomClassType(e.Current.Value) && !Utils.IsAgentType(e.Current.Value) && !Utils.IsStaticType(e.Current.Value))
-                                {
-                                    ExportStructTypeField(xmlWriter, e.Current.Value, onlyExportPublicMembers);
-                                }
-                            }
-
-                            // end of types
-                            xmlWriter.WriteEndElement();
-
-                            // agents
-                            xmlWriter.WriteStartElement("agents");
-
-                            for (int i = 0; i < m_agentTypes.Count; ++i)
-                            {
-                                TypeInfo_t typeInfo = m_agentTypes[i];
-                                Type agentType = typeInfo.type;
-
-                                //Debug.Check(Utils.IsAgentType(agentType) || Utils.IsStaticType(agentType));
-                                if (!Utils.IsAgentType(agentType) && !Utils.IsStaticType(agentType))
-                                {
-                                    continue;
-                                }
-
-                                xmlWriter.WriteStartElement("agent");
-
-                                string agentFullName = GetFullTypeName(agentType);
-                                xmlWriter.WriteAttributeString("classfullname", agentFullName);
-
-                                if (agentType.BaseType != null && agentType.BaseType != typeof(object) && agentType != typeof(Agent))
-                                {
-                                    string baseClass = GetFullTypeName(agentType.BaseType);
-                                    xmlWriter.WriteAttributeString("base", baseClass);
-                                }
-
-                                {
-                                    //behaviac.AgentTypeAttribute cda = (behaviac.AgentTypeAttribute)attributes[0];
-                                    Agent.CTagObjectDescriptor objectDesc = Agent.GetDescriptorByName(agentType.FullName);
-
-                                    xmlWriter.WriteAttributeString("DisplayName", objectDesc != null ? objectDesc.displayName : "");
-                                    xmlWriter.WriteAttributeString("Desc", objectDesc != null ? objectDesc.desc : "");
-                                    //agent is a ref type no matter TypeMetaInfoAttribute
-                                    xmlWriter.WriteAttributeString("IsRefType", "true");
-
-                                    if (Utils.IsStaticType(agentType))
-                                    {
-                                        xmlWriter.WriteAttributeString("IsStatic", "true");
-                                    }
-
-                                    if (!string.IsNullOrEmpty(agentType.Namespace))
-                                    {
-                                        xmlWriter.WriteAttributeString("Namespace", agentType.Namespace.Replace(".", "::"));
-                                    }
-
-                                    ExportType(xmlWriter, agentType, true, onlyExportPublicMembers);
-                                }
-              
-
-                                // end of agent
-                                xmlWriter.WriteEndElement();
-                            }
-
-                            // end of agents
-                            xmlWriter.WriteEndElement();
-
-                            // instances
-                            ExportInstanceNames(xmlWriter);
-
-                            // end of metas
-                            xmlWriter.WriteEndElement();
-
-                            xmlWriter.WriteEndDocument();
-                        }
-
-                        file.Close();
-                    }
-
-                    //TODO:names
-
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    behaviac.Debug.LogError(ex.Message);
-                }
-            }
-#else
-            Debug.LogWarning("when BEHAVIAC_RELEASE is defined, no Meta will be exported!");
-#endif//BEHAVIAC_RELEASE
-            return false;
-        }
-
-        public bool ExportMetas(string exportPathRelativeToWorkspace)
-        {
-            return ExportMetas(exportPathRelativeToWorkspace, false);
-        }
 
         private Assembly m_callingAssembly = null;
         private Assembly CallingAssembly
@@ -2757,413 +1956,17 @@ namespace behaviac
             }
         }
 
-#if !BEHAVIAC_RELEASE
-        private class TypeInfo_t
+        public bool ExportMetas(string xmlMetaFilePath, bool onlyExportPublicMembers)
         {
-            public Type type;
-            public bool bIsInherited = false;
+            Debug.LogWarning("deprecated, please remove calling of ExportMetas");
+
+            return false;
         }
 
-        private List<TypeInfo_t> m_agentTypes = new List<TypeInfo_t>();
-        private List<TypeInfo_t> m_agentTypes_Referenced = new List<TypeInfo_t>();
-
-        public void AddAgentType(Type agentType, bool isInherited)
+        public bool ExportMetas(string exportPathRelativeToWorkspace)
         {
-            if (!IsRegisterd(agentType))
-            {
-                TypeInfo_t typeInfo = new TypeInfo_t();
-                typeInfo.type = agentType;
-                typeInfo.bIsInherited = isInherited;
-
-                m_agentTypes.Add(typeInfo);
-            }
+            return ExportMetas(exportPathRelativeToWorkspace, false);
         }
 
-        private bool IsRegisterd(Type type)
-        {
-            int p = m_agentTypes.FindIndex(delegate(TypeInfo_t t)
-            {
-                return t.type == type;
-            });
-
-            return p != -1;
-        }
-
-        private bool IsRegisterd_Referenced(Type type)
-        {
-            int p = m_agentTypes_Referenced.FindIndex(delegate(TypeInfo_t t)
-            {
-                return t.type == type;
-            });
-
-            return p != -1;
-        }
-
-        private bool m_metaRegistered = false;
-
-        private void RegisterMetas()
-        {
-            if (!m_metaRegistered)
-            {
-                RegisterMetas(this.CallingAssembly);
-
-                m_metaRegistered = true;
-            }
-        }
-
-        private void UnRegisterMetas()
-        {
-            Debug.Check(m_metaRegistered);
-            Debug.Check(m_agentTypes != null);
-
-            m_agentTypes.Clear();
-            m_metaRegistered = false;
-        }
-
-        private void RegisterMetas(Assembly a)
-        {
-            List<Type> baseTypes = new List<Type>();
-
-            Type[] types = a.GetTypes();
-            for (int i = 0; i < types.Length; ++i)
-            {
-                Type type = types[i];
-                //if (type.IsSubclassOf(typeof(behaviac.Agent)) || Utils.IsStaticType(type))
-                {
-                    if (!IsRegisterd(type))
-                    {
-                        Attribute[] attributes = (Attribute[])type.GetCustomAttributes(typeof(behaviac.TypeMetaInfoAttribute), false);
-
-                        if (attributes.Length > 0)
-                        {
-                            TypeInfo_t typeInfo = new TypeInfo_t();
-                            typeInfo.type = type;
-
-                            m_agentTypes.Add(typeInfo);
-
-                            CollectBaseTypes(baseTypes, type);
-
-                            if (Utils.IsStaticType(type))
-                            {
-                                behaviac.TypeMetaInfoAttribute typeMetaInfo = attributes[0] as behaviac.TypeMetaInfoAttribute;
-                                Agent.RegisterStaticClass(type, typeMetaInfo.DisplayName, typeMetaInfo.Description);
-                            }
-                        }
-                    }
-                }
-            }
-
-            for (int i = 0; i < baseTypes.Count; ++i)
-            {
-                Type type = baseTypes[i];
-                if (!IsRegisterd(type))
-                {
-                    TypeInfo_t typeInfo = new TypeInfo_t();
-                    typeInfo.type = type;
-                    typeInfo.bIsInherited = true;
-
-                    m_agentTypes.Add(typeInfo);
-                }
-            }
-
-            SortAgentTypes(m_agentTypes);
-
-            for (int i = 0; i < m_agentTypes.Count; ++i)
-            {
-                TypeInfo_t typeInfo = m_agentTypes[i];
-                Type type = typeInfo.type;
-                //Debug.Check(Utils.IsAgentType(type) || Utils.IsStaticType(type));
-                RegisterType(type, true);
-            }
-
-            //Agent Type's members might reference other agent types which are not decorated by TypeMetaInfoAttribute
-            //and collected to m_agentTypes_Referenced
-            baseTypes.Clear();
-
-            //collect all its ancestor agent types if not registered yet
-            for (int i = 0; i < m_agentTypes_Referenced.Count; ++i)
-            {
-                TypeInfo_t typeInfo = m_agentTypes_Referenced[i];
-                Type type = typeInfo.type;
-
-                if (!IsRegisterd(type))
-                {
-                    CollectBaseTypes(baseTypes, type);
-                }
-            }
-
-            for (int i = 0; i < baseTypes.Count; ++i)
-            {
-                Type type = baseTypes[i];
-                if (!IsRegisterd_Referenced(type) && !IsRegisterd(type))
-                {
-                    TypeInfo_t typeInfo = new TypeInfo_t();
-                    typeInfo.type = type;
-                    typeInfo.bIsInherited = true;
-
-                    m_agentTypes_Referenced.Add(typeInfo);
-                }
-            }
-
-            SortAgentTypes(m_agentTypes_Referenced);
-
-            m_agentTypes.AddRange(m_agentTypes_Referenced);
-            m_agentTypes_Referenced.Clear();
-
-            //resort after referenced agent types are added
-            SortAgentTypes(m_agentTypes);
-
-            RegisterReferedTypes();
-        }
-
-        private void SortAgentTypes(List<TypeInfo_t> agentTypes)
-        {
-            agentTypes.Sort(delegate(TypeInfo_t x, TypeInfo_t y)
-            {
-                if (x == y || x.type == y.type)
-                {
-                    return 0;
-                }
-
-                if (x.type == typeof(behaviac.Agent))
-                {
-                    return -1;
-                }
-                else if (y.type == typeof(behaviac.Agent))
-                {
-                    return 1;
-                }
-
-                if (x.bIsInherited && !y.bIsInherited)
-                {
-                    return -1;
-                }
-                else if (!x.bIsInherited && y.bIsInherited)
-                {
-                    return 1;
-                }
-
-                if (x.type.IsSubclassOf(y.type))
-                {
-                    return 1;
-                }
-                else if (y.type.IsSubclassOf(x.type))
-                {
-                    return -1;
-                }
-
-                return x.type.FullName.CompareTo(y.type.FullName);
-            });
-        }
-
-        private void CollectBaseTypes(List<Type> baseTypes, Type type)
-        {
-            //find all the base type and ancestors
-            Type ti = type.BaseType;
-
-            while (ti != null && Utils.IsAgentType(ti))
-            {
-                if (baseTypes.FindIndex(delegate(Type t)
-                {
-                    return t == ti;
-                }) == -1)
-                {
-                    baseTypes.Add(ti);
-                }
-
-                ti = ti.BaseType;
-            }
-        }
-
-        private Dictionary<string, Type> m_registerTypes = new Dictionary<string, Type>();
-
-        private void RegisterReferedTypes()
-        {
-            m_registerTypes.Clear();
-
-            for (int i = 0; i < m_agentTypes.Count; ++i)
-            {
-                TypeInfo_t typeInfo = m_agentTypes[i];
-                Type agentType = typeInfo.type;
-
-                string typeFullName = GetFullTypeName(agentType);
-
-                if (!m_registerTypes.ContainsKey(typeFullName))
-                {
-                    m_registerTypes.Add(typeFullName, agentType);
-                }
-
-                Attribute[] attributes = (Attribute[])agentType.GetCustomAttributes(typeof(behaviac.TypeMetaInfoAttribute), false);
-
-                if (attributes.Length > 0)
-                {
-                    CollectType(m_registerTypes, agentType, true, false);
-                }
-            }
-        }
-
-        private void RegisterType(Type type, bool bExpandMembers)
-        {
-            bool bReferendAgentType = false;
-            Attribute[] attributes = (Attribute[])type.GetCustomAttributes(typeof(behaviac.TypeMetaInfoAttribute), false);
-
-            if (!bExpandMembers && attributes.Length == 0)
-            {
-                //type is a referenced agent type which is not decorated by TypeMetaInfoAttribute
-                if (Utils.IsAgentType(type) && !IsRegisterd_Referenced(type) && !IsRegisterd(type))
-                {
-                    TypeInfo_t typeInfo = new TypeInfo_t();
-                    typeInfo.type = type;
-
-                    m_agentTypes_Referenced.Add(typeInfo);
-
-                    bReferendAgentType = true;
-                }
-            }
-
-            //agent type must have behaviac.AgentTypeAttribute
-            if (!bExpandMembers || attributes.Length > 0 || bReferendAgentType)
-            {
-                behaviac.TypeMetaInfoAttribute cda = attributes.Length > 0 ? (behaviac.TypeMetaInfoAttribute)attributes[0] : null;
-
-                string typeFullName = type.FullName.Replace('+', '.');
-                Agent.CTagObjectDescriptor objectDesc = Agent.GetDescriptorByName(typeFullName);
-
-                if (type.BaseType != null && Utils.IsAgentType(type.BaseType))
-                {
-                    string baseTypeFullName = type.BaseType.FullName.Replace('+', '.');
-                    Agent.CTagObjectDescriptor baseObjectDesc = Agent.GetDescriptorByName(baseTypeFullName);
-                    objectDesc.m_parent = baseObjectDesc;
-                }
-
-                objectDesc.type = type;
-                objectDesc.displayName = ((cda == null || string.IsNullOrEmpty(cda.DisplayName)) ? typeFullName : cda.DisplayName);
-                objectDesc.desc = ((cda == null || string.IsNullOrEmpty(cda.Description)) ? objectDesc.displayName : cda.Description);
-
-                if (Utils.IsEnumType(type))
-                {
-                    return;
-                }
-
-                BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
-
-                FieldInfo[] fields = type.GetFields(bindingFlags);
-                for (int i = 0; i < fields.Length; ++i)
-                {
-                    FieldInfo f = fields[i];
-                    //for agent type, only register members with MemberDescAttribute
-                    behaviac.MemberMetaInfoAttribute memberDesc;
-                    bool bToRegister = IfToRegister(bExpandMembers, f, out memberDesc);
-
-                    if (bToRegister)
-                    {
-                        CMemberBase m = new CFieldInfo(f, memberDesc);
-
-                        RegisterMember(type, objectDesc, f.FieldType, m);
-                    }
-                }
-
-                PropertyInfo[] properties = type.GetProperties(bindingFlags);
-                for (int i = 0; i < properties.Length; ++i)
-                {
-                    PropertyInfo p = properties[i];
-                    //for agent type, only register members with MemberDescAttribute
-                    behaviac.MemberMetaInfoAttribute memberDesc;
-                    bool bToRegister = IfToRegister(bExpandMembers, p, out memberDesc);
-
-                    if (bToRegister)
-                    {
-                        CMemberBase m = new CProperyInfo(p, memberDesc);
-
-                        RegisterMember(type, objectDesc, p.PropertyType, m);
-                    }
-                }
-
-                if (bExpandMembers)
-                {
-                    MethodInfo[] methods = type.GetMethods(bindingFlags);
-                    for (int i = 0; i < methods.Length; ++i)
-                    {
-                        MethodInfo m = methods[i];
-                        Attribute[] attributes2 = (Attribute[])m.GetCustomAttributes(typeof(behaviac.MethodMetaInfoAttribute), false);
-
-                        if (attributes2.Length > 0)
-                        {
-                            behaviac.MethodMetaInfoAttribute methodDesc = (behaviac.MethodMetaInfoAttribute)attributes2[0];
-
-                            CMethodBase method = new CMethodBase(m, methodDesc, null);
-                            objectDesc.ms_methods.Add(method);
-
-                            ParameterInfo[] parameters = m.GetParameters();
-                            for (int k = 0; k < parameters.Length; ++k)
-                            {
-                                ParameterInfo para = parameters[k];
-                                if ((Utils.IsCustomClassType(para.ParameterType) || Utils.IsEnumType(para.ParameterType)) &&
-                                    !Agent.IsTypeRegisterd(para.ParameterType.FullName))
-                                {
-                                    RegisterType(para.ParameterType, false);
-                                }
-                            }
-
-                            if ((Utils.IsCustomClassType(m.ReturnType) || Utils.IsEnumType(m.ReturnType)) &&
-                                !Agent.IsTypeRegisterd(m.ReturnType.FullName))
-                            {
-                                RegisterType(m.ReturnType, false);
-                            }
-                        }
-                    }//end of for
-                }//if (bIsAgentType)
-            }
-        }
-
-        private bool IfToRegister(bool bIsAgentType, MemberInfo f, out behaviac.MemberMetaInfoAttribute memberDesc)
-        {
-            bool bToRegister = false;
-
-            memberDesc = null;
-
-            if (bIsAgentType)
-            {
-                Attribute[] attributes1 = (Attribute[])f.GetCustomAttributes(typeof(behaviac.MemberMetaInfoAttribute), false);
-
-                if (attributes1.Length > 0)
-                {
-                    memberDesc = (behaviac.MemberMetaInfoAttribute)attributes1[0];
-                    bToRegister = true;
-                }
-            }
-            else
-            {
-                bToRegister = true;
-            }
-
-            return bToRegister;
-        }
-
-        private void RegisterMember(Type type, Agent.CTagObjectDescriptor objectDesc, Type memberType, CMemberBase m)
-        {
-            CMemberBase pMember = objectDesc.ms_members.Find(delegate(CMemberBase m1)
-            {
-                return m1.GetId() == m.GetId();
-            });
-
-            if (pMember == null)
-            {
-                objectDesc.ms_members.Add(m);
-
-                if ((Utils.IsCustomClassType(memberType) || Utils.IsEnumType(memberType)) &&
-                    !Agent.IsTypeRegisterd(memberType.FullName))
-                {
-                    RegisterType(memberType, false);
-                }
-            }
-            else
-            {
-                //string msg = string.Format("{0}.{1} duplated", type.FullName, pMember.Name);
-                //Debug.LogWarning(msg);
-            }
-        }
-#endif//BEHAVIAC_RELEASE
-        #endregion ExportMeta
     }
 }

@@ -3,7 +3,7 @@
 <!--Source File: Tank_SafeWander_RandomFire.xml-->
 <behavior name="Tank_SafeWander_RandomFire" agenttype="Player" version="5">
   <pars>
-    <par name="parIn_Self" type="Player" value="null" />
+    <par name="parIn_Self" type="Player*" value="null" />
     <par name="parT_RotateAngle" type="float" value="0" />
     <par name="parT_AimAngle" type="float" value="0" />
     <par name="parT_SafeMoveDirection" type="eMapDirection" value="UNKNOWN" />

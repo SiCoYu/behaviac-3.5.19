@@ -3,7 +3,7 @@
 <!--Source File: Tank_Fire.xml-->
 <behavior name="Tank_Fire" agenttype="Player" version="5">
   <pars>
-    <par name="parIn_Self" type="Player" value="null" />
+    <par name="parIn_Self" type="Player*" value="null" />
   </pars>
   <node class="Sequence" id="0">
     <node class="Assignment" id="2">

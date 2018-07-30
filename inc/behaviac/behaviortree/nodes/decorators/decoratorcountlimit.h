@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,16 +11,15 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef BEHAVIAC_BEHAVIORTREE_DECORATORCOUNTLIMIT_H
-#define BEHAVIAC_BEHAVIORTREE_DECORATORCOUNTLIMIT_H
+#ifndef _BEHAVIAC_BEHAVIORTREE_DECORATORCOUNTLIMIT_H_
+#define _BEHAVIAC_BEHAVIORTREE_DECORATORCOUNTLIMIT_H_
 
-#include "behaviac/base/base.h"
+#include "behaviac/common/base.h"
 #include "behaviac/behaviortree/behaviortree.h"
 #include "behaviac/behaviortree/behaviortree_task.h"
 #include "behaviac/behaviortree/nodes/decorators/decoratorcount.h"
 
-namespace behaviac
-{
+namespace behaviac {
     /*! \addtogroup treeNodes Behavior Tree
     * @{
     * \addtogroup DecoratorCountLimit
@@ -33,8 +32,7 @@ namespace behaviac
     only when its child node return value is Success or Failure. The inner count will never reset until
     attachment on the node evaluate true.
     */
-    class BEHAVIAC_API DecoratorCountLimit : public DecoratorCount
-    {
+    class BEHAVIAC_API DecoratorCountLimit : public DecoratorCount {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(DecoratorCountLimit, DecoratorCount);
 
@@ -51,8 +49,7 @@ namespace behaviac
     };
 
     ///enter and tick the child for the specified number of iterations, then it will not enter and tick the child after that
-    class BEHAVIAC_API DecoratorCountLimitTask : public DecoratorCountTask
-    {
+    class BEHAVIAC_API DecoratorCountLimitTask : public DecoratorCountTask {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(DecoratorCountLimitTask, DecoratorCountTask);
 
@@ -60,8 +57,8 @@ namespace behaviac
 
     protected:
         virtual void copyto(BehaviorTask* target) const;
-        virtual void save(ISerializableNode* node) const;
-        virtual void load(ISerializableNode* node);
+        virtual void save(IIONode* node) const;
+        virtual void load(IIONode* node);
 
         virtual bool onenter(Agent* pAgent);
         virtual EBTStatus decorate(EBTStatus status);
@@ -72,4 +69,4 @@ namespace behaviac
     /*! @} */
 }
 
-#endif//BEHAVIAC_BEHAVIORTREE_DECORATORCOUNTLIMIT_H
+#endif//_BEHAVIAC_BEHAVIORTREE_DECORATORCOUNTLIMIT_H_

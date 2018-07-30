@@ -4,7 +4,7 @@
 <behavior name="Tank_Destroy_Enemy" agenttype="Player" version="5">
   <pars>
     <par name="parT_enemyPosition" type="UnityEngine::Vector3" value="{x=0;y=0;z=0;}" />
-    <par name="parT_nearestEnemy" type="behaviac::Agent" value="null" />
+    <par name="parT_nearestEnemy" type="behaviac::Agent*" value="null" />
   </pars>
   <node class="DecoratorAlwaysRunning" id="10">
     <property DecorateWhenChildEnds="false" />

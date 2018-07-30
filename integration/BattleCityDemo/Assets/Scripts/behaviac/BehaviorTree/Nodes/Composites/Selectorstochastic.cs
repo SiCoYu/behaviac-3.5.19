@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -88,6 +88,8 @@ namespace behaviac
                 EBTStatus s = childStatus;
                 Debug.Check(this.m_activeChildIndex < this.m_children.Count);
 
+                SelectorStochastic node = this.m_node as SelectorStochastic;
+
                 // Keep going until a child behavior says its running.
                 for (; ;)
                 {
@@ -95,6 +97,12 @@ namespace behaviac
                     {
                         int childIndex = this.m_set[this.m_activeChildIndex];
                         BehaviorTask pBehavior = this.m_children[childIndex];
+
+                        if (node.CheckIfInterrupted(pAgent))
+                        {
+                            return EBTStatus.BT_FAILURE;
+                        }
+
                         s = pBehavior.exec(pAgent);
                     }
 

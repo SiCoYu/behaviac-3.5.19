@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,15 +11,14 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef BEHAVIAC_BEHAVIORTREE_SELECTORLOOP_H
-#define BEHAVIAC_BEHAVIORTREE_SELECTORLOOP_H
+#ifndef _BEHAVIAC_BEHAVIORTREE_SELECTORLOOP_H_
+#define _BEHAVIAC_BEHAVIORTREE_SELECTORLOOP_H_
 
-#include "behaviac/base/base.h"
+#include "behaviac/common/base.h"
 #include "behaviac/behaviortree/behaviortree.h"
 #include "behaviac/behaviortree/behaviortree_task.h"
 
-namespace behaviac
-{
+namespace behaviac {
     /*! \addtogroup treeNodes Behavior Tree
     * @{
     * \addtogroup SelectorLoop
@@ -32,8 +31,7 @@ namespace behaviac
     it first cleans up the original executing one. all its children are WithPreconditionTask
     or its derivatives.
     */
-    class BEHAVIAC_API SelectorLoop : public BehaviorNode
-    {
+    class BEHAVIAC_API SelectorLoop : public BehaviorNode {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(SelectorLoop, BehaviorNode);
 
@@ -41,17 +39,20 @@ namespace behaviac
         virtual ~SelectorLoop();
         virtual void load(int version, const char* agentType, const properties_t& properties);
         virtual bool IsManagingChildrenAsSubTrees() const;
+
     protected:
         virtual bool IsValid(Agent* pAgent, BehaviorTask* pTask) const;
+
     private:
         virtual BehaviorTask* createTask() const;
-        //protected:
-        //	Nodes*		m_preconditions;
-        //	Nodes*		m_actions;
+
+    protected:
+		bool    m_bResetChildren;
+
+		friend class SelectorLoopTask;
     };
 
-    class BEHAVIAC_API SelectorLoopTask : public CompositeTask
-    {
+    class BEHAVIAC_API SelectorLoopTask : public CompositeTask {
     public:
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(SelectorLoopTask, CompositeTask);
         SelectorLoopTask();
@@ -61,8 +62,8 @@ namespace behaviac
         virtual void addChild(BehaviorTask* pBehavior);
     protected:
         virtual void copyto(BehaviorTask* target) const;
-        virtual void save(ISerializableNode* node) const;
-        virtual void load(ISerializableNode* node);
+        virtual void save(IIONode* node) const;
+        virtual void load(IIONode* node);
 
         virtual bool onenter(Agent* pAgent);
         virtual void onexit(Agent* pAgent, EBTStatus s);
@@ -73,4 +74,4 @@ namespace behaviac
     /*! @} */
 }
 
-#endif//BEHAVIAC_BEHAVIORTREE_SELECTORLOOP_H
+#endif//_BEHAVIAC_BEHAVIORTREE_SELECTORLOOP_H_

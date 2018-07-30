@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in
 // compliance with the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -20,14 +20,10 @@ using System.Collections.Generic;
 using System.IO;
 
 #if BEHAVIAC_USE_SYSTEM_XML
-
 using System.Xml;
-
 #else
-
 using System.Security;
-using Mono.Xml;
-
+using MiniXml;
 #endif
 
 namespace behaviac
@@ -423,7 +419,7 @@ namespace behaviac
         }
 
 #if BEHAVIAC_USE_SYSTEM_XML
-        protected virtual void load_par(int version, string agentType, XmlNode node)
+        protected virtual void load_local(int version, string agentType, XmlNode node)
         {
             Debug.Check(false);
         }
@@ -437,7 +433,7 @@ namespace behaviac
             bool bHasEvents = this.HasEvents();
             List<property_t> properties = new List<property_t>();
 
-            foreach(XmlNode c in node.ChildNodes)
+            foreach (XmlNode c in node.ChildNodes)
             {
                 if (!load_property_pars(ref properties, c, version, agentType))
                 {
@@ -566,11 +562,11 @@ namespace behaviac
                 }
                 else if (node.Name == "pars")
                 {
-                    foreach(XmlNode parNode in node.ChildNodes)
+                    foreach (XmlNode parNode in node.ChildNodes)
                     {
                         if (parNode.Name == "par")
                         {
-                            this.load_par(version, agentType, parNode);
+                            this.load_local(version, agentType, parNode);
                         }
                     }
 
@@ -607,7 +603,7 @@ namespace behaviac
         }
 #else
 
-        protected virtual void load_par(int version, string agentType, SecurityElement node)
+        protected virtual void load_local(int version, string agentType, SecurityElement node)
         {
             Debug.Check(false);
         }
@@ -624,7 +620,7 @@ namespace behaviac
             {
                 List<property_t> properties = new List<property_t>();
 
-                foreach(SecurityElement c in node.Children)
+                foreach (SecurityElement c in node.Children)
                 {
                     if (!load_property_pars(ref properties, c, version, agentType))
                     {
@@ -745,7 +741,8 @@ namespace behaviac
                 if (c.Tag == "property")
                 {
                     Debug.Check(c.Attributes.Count == 1);
-                    foreach(string propName in c.Attributes.Keys)
+
+                    foreach (string propName in c.Attributes.Keys)
                     {
                         string propValue = (string)c.Attributes[propName];
                         property_t p = new property_t(propName, propValue);
@@ -759,11 +756,11 @@ namespace behaviac
                 {
                     if (c.Children != null)
                     {
-                        foreach(SecurityElement parNode in c.Children)
+                        foreach (SecurityElement parNode in c.Children)
                         {
                             if (parNode.Tag == "par")
                             {
-                                this.load_par(version, agentType, parNode);
+                                this.load_local(version, agentType, parNode);
                             }
                         }
                     }
@@ -836,7 +833,7 @@ namespace behaviac
             d.CloseDocument(false);
         }
 
-        protected void load_pars(int version, string agentType, BsonDeserizer d)
+        protected void load_locals(int version, string agentType, BsonDeserizer d)
         {
             d.OpenDocument();
 
@@ -844,7 +841,7 @@ namespace behaviac
 
             while (type == BsonDeserizer.BsonTypes.BT_ParElement)
             {
-                this.load_par(version, agentType, d);
+                this.load_local(version, agentType, d);
 
                 type = d.ReadType();
             }
@@ -906,7 +903,7 @@ namespace behaviac
                 }
                 else if (type == BsonDeserizer.BsonTypes.BT_ParsElement)
                 {
-                    this.load_pars(version, agentType, d);
+                    this.load_locals(version, agentType, d);
                 }
                 else if (type == BsonDeserizer.BsonTypes.BT_AttachmentsElement)
                 {
@@ -949,7 +946,7 @@ namespace behaviac
             return pNode;
         }
 
-        protected virtual void load_par(int version, string agentType, BsonDeserizer d)
+        protected virtual void load_local(int version, string agentType, BsonDeserizer d)
         {
             Debug.Check(false);
         }
@@ -1005,7 +1002,7 @@ namespace behaviac
             {
                 if (type == BsonDeserizer.BsonTypes.BT_ParsElement)
                 {
-                    this.load_pars(version, agentType, d);
+                    this.load_locals(version, agentType, d);
                 }
                 else if (type == BsonDeserizer.BsonTypes.BT_AttachmentsElement)
                 {
@@ -1415,9 +1412,11 @@ namespace behaviac
         protected override void load(int version, string agentType, List<property_t> properties)
         {
             base.load(version, agentType, properties);
+
             for (int i = 0; i < properties.Count; ++i)
             {
                 property_t p = properties[i];
+
                 if (p.name == "DecorateWhenChildEnds")
                 {
                     if (p.value == "true")
@@ -1457,10 +1456,19 @@ namespace behaviac
         private Dictionary<uint, ICustomizedProperty> m_localProps;
         public Dictionary<uint, ICustomizedProperty> LocalProps
         {
-            get { return m_localProps; }
+            get
+            {
+                return m_localProps;
+            }
         }
 
-        public void AddPar(string agentType, string typeName, string name, string value)
+        // deprecated, to use AddLocal
+        public void AddPar(string agentType, string typeName, string name, string valueStr)
+        {
+            this.AddLocal(agentType, typeName, name, valueStr);
+        }
+
+        public void AddLocal(string agentType, string typeName, string name, string valueStr)
         {
             if (this.m_localProps == null)
             {
@@ -1468,10 +1476,11 @@ namespace behaviac
             }
 
             uint varId = Utils.MakeVariableId(name);
-            ICustomizedProperty prop = AgentMeta.CreateProperty(typeName, varId, name, value);
+            ICustomizedProperty prop = AgentMeta.CreateProperty(typeName, varId, name, valueStr);
             this.m_localProps[varId] = prop;
 
             Type type = Utils.GetElementTypeFromName(typeName);
+
             if (type != null)
             {
                 typeName = Utils.GetNativeTypeName(type);
@@ -1485,9 +1494,12 @@ namespace behaviac
         {
             if (this.m_localProps != null)
             {
-                foreach (KeyValuePair<uint, ICustomizedProperty> pair in this.m_localProps)
+                var e = this.m_localProps.Keys.GetEnumerator();
+
+                while (e.MoveNext())
                 {
-                    vars[pair.Key] = pair.Value.Instantiate();
+                    uint varId = e.Current;
+                    vars[varId] = this.m_localProps[varId].Instantiate();
                 }
             }
         }
@@ -1496,15 +1508,18 @@ namespace behaviac
         {
             if (this.m_localProps != null)
             {
-                foreach (uint varId in this.m_localProps.Keys)
+                var e = this.m_localProps.Keys.GetEnumerator();
+
+                while (e.MoveNext())
                 {
+                    uint varId = e.Current;
                     vars.Remove(varId);
                 }
             }
         }
 
 #if BEHAVIAC_USE_SYSTEM_XML
-        protected override void load_par(int version, string agentType, XmlNode node)
+        protected override void load_local(int version, string agentType, XmlNode node)
         {
             if (node.Name != "par")
             {
@@ -1516,10 +1531,10 @@ namespace behaviac
             string type = node.Attributes["type"].Value.Replace("::", ".");
             string value = node.Attributes["value"].Value;
 
-            this.AddPar(agentType, type, name, value);
+            this.AddLocal(agentType, type, name, value);
         }
 #else
-        protected override void load_par(int version, string agentType, SecurityElement node)
+        protected override void load_local(int version, string agentType, SecurityElement node)
         {
             if (node.Tag != "par")
             {
@@ -1531,18 +1546,18 @@ namespace behaviac
             string type = node.Attribute("type").Replace("::", ".");
             string value = node.Attribute("value");
 
-            this.AddPar(agentType, type, name, value);
+            this.AddLocal(agentType, type, name, value);
         }
 #endif
 
-        protected override void load_par(int version, string agentType, BsonDeserizer d)
+        protected override void load_local(int version, string agentType, BsonDeserizer d)
         {
             d.OpenDocument();
 
             string name = d.ReadString();
             string type = d.ReadString().Replace("::", ".");
             string value = d.ReadString();
-            this.AddPar(agentType, type, name, value);
+            this.AddLocal(agentType, type, name, value);
 
             d.CloseDocument(true);
         }
@@ -1629,7 +1644,8 @@ namespace behaviac
                         Debug.Check(bOk);
 
                         this.m_name = d.ReadString();
-                        string agentType = d.ReadString().Replace("::", ".");
+                        string agentTypeTmp = d.ReadString();
+                        string agentType = agentTypeTmp.Replace("::", ".");
                         bool bFsm = d.ReadBool();
                         string versionStr = d.ReadString();
                         int version = Convert.ToInt32(versionStr);
@@ -1654,6 +1670,7 @@ namespace behaviac
             }
             catch (Exception e)
             {
+                Debug.LogError(string.Format("load_bson failed: {0} {1}", e.Message, pBuffer.Length));
                 Debug.Check(false, e.Message);
             }
 
@@ -1679,8 +1696,14 @@ namespace behaviac
 
         public bool IsFSM
         {
-            get { return this.m_bIsFSM; }
-            set { this.m_bIsFSM = value; }
+            get
+            {
+                return this.m_bIsFSM;
+            }
+            set
+            {
+                this.m_bIsFSM = value;
+            }
         }
         #endregion
 

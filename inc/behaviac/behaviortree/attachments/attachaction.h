@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,52 +11,46 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef BEHAVIAC_BEHAVIORTREE_ATTACHACTION_H
-#define BEHAVIAC_BEHAVIORTREE_ATTACHACTION_H
+#ifndef _BEHAVIAC_BEHAVIORTREE_ATTACHACTION_H_
+#define _BEHAVIAC_BEHAVIORTREE_ATTACHACTION_H_
 
-#include "behaviac/base/base.h"
+#include "behaviac/common/base.h"
 #include "behaviac/behaviortree/behaviortree.h"
 #include "behaviac/behaviortree/behaviortree_task.h"
 #include "behaviac/property/property.h"
 
-namespace behaviac
-{
+namespace behaviac {
     class VariableComparator;
-
-    class BEHAVIAC_API  AttachAction : public BehaviorNode
-    {
+    enum EOperatorType;
+    class IInstanceMember;
+    class BEHAVIAC_API  AttachAction : public BehaviorNode {
     public:
-        enum EOperatorType
-        {
-            E_INVALID,
-            E_ASSIGN,        // =
-            E_ADD,           // +
-            E_SUB,           // -
-            E_MUL,           // *
-            E_DIV,           // /
-            E_EQUAL,         // ==
-            E_NOTEQUAL,      // !=
-            E_GREATER,       // >
-            E_LESS,          // <
-            E_GREATEREQUAL,  // >=
-            E_LESSEQUAL      // <=
-        };
-
+        //enum EOperatorType
+        //{
+        //    E_INVALID,
+        //    E_ASSIGN,        // =
+        //    E_ADD,           // +
+        //    E_SUB,           // -
+        //    E_MUL,           // *
+        //    E_DIV,           // /
+        //    E_EQUAL,         // ==
+        //    E_NOTEQUAL,      // !=
+        //    E_GREATER,       // >
+        //    E_LESS,          // <
+        //    E_GREATEREQUAL,  // >=
+        //    E_LESSEQUAL      // <=
+        //};
 
         BEHAVIAC_DECLARE_DYNAMIC_TYPE(AttachAction, BehaviorNode);
         AttachAction();
         virtual ~AttachAction();
-        class ActionConfig
-        {
+        class ActionConfig {
         public:
             behaviac::string m_typeName;
-            Property*		m_opl;
-            behaviac::CMethodBase*	m_opl_m;
-            Property*		m_opr1;
-            behaviac::CMethodBase*	m_opr1_m;
-            EOperatorType	m_operator ;
-            Property* 		m_opr2;
-            behaviac::CMethodBase* 	m_opr2_m;
+            IInstanceMember*		m_opl;
+            IInstanceMember*        m_opr1;
+            EOperatorType	    m_operator ;
+            IInstanceMember* 		m_opr2;
 
         private:
             VariableComparator* m_comparator;
@@ -64,8 +58,8 @@ namespace behaviac
         protected:
             ActionConfig();
         public:
-			BEHAVIAC_DECLARE_MEMORY_OPERATORS(ActionConfig);
-			virtual ~ActionConfig();
+            BEHAVIAC_DECLARE_MEMORY_OPERATORS(ActionConfig);
+            virtual ~ActionConfig();
             virtual bool load(const properties_t& properties);
 
         public:
@@ -77,10 +71,10 @@ namespace behaviac
 
     public:
         virtual bool Evaluate(Agent* pAgent);
-		virtual bool Evaluate(Agent* pAgent, EBTStatus result);
+        virtual bool Evaluate(Agent* pAgent, EBTStatus result);
     protected:
         virtual BehaviorTask* createTask() const;
     };
 }
 
-#endif //BEHAVIAC_BEHAVIORTREE_ATTACHACTION_H
+#endif //_BEHAVIAC_BEHAVIORTREE_ATTACHACTION_H_

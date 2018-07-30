@@ -12,10 +12,10 @@
     <par name="parT_AwardX" type="int" value="0" />
     <par name="parT_AwardY" type="int" value="0" />
     <par name="parT_AwardType" type="int" value="0" />
-    <par name="parT_ForceColors" type="vector&lt;UnityEngine::Color&gt;" value="4:{a=1;b=0;g=0;r=1;}|{a=1;b=1;g=0;r=0;}|{a=1;b=0;g=1;r=1;}|{a=1;b=0;g=1;r=0;}" />
+    <par name="parT_ForceColors" type="vector&lt;UnityEngine::Color&gt;" value="4:{r=1;g=0;b=0;a=1;}|{r=0;g=0;b=1;a=1;}|{r=1;g=1;b=0;a=1;}|{r=0;g=1;b=0;a=1;}" />
     <par name="parT_Forces" type="vector&lt;eGameForce&gt;" value="4:BLUE_FORCE|BLUE_FORCE|BLUE_FORCE|RED_FORCE" />
     <par name="parT_ActorForce" type="eGameForce" value="BLUE_FORCE" />
-    <par name="parT_ActorColor" type="UnityEngine::Color" value="{a=0;b=0;g=0;r=0;}" />
+    <par name="parT_ActorColor" type="UnityEngine::Color" value="{r=0;g=0;b=0;a=0;}" />
     <par name="parT_RedForceID" type="int" value="0" />
     <par name="parT_ActorCount" type="int" value="4" />
     <par name="parT_BehaviorTree" type="vector&lt;string&gt;" value="4:&quot;Tank_SafeWander_RandomFire&quot;|&quot;Tank_SafeWander_RandomFire&quot;|&quot;Tank_SafeWander_RandomFire&quot;|&quot;Tank_Agressive&quot;" />

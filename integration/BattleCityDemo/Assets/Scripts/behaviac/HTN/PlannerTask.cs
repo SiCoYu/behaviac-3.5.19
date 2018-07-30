@@ -11,17 +11,29 @@ namespace behaviac
     {
         #region Public properties
 
-        public PlannerTaskComplex Parent { get; set; }
+        public PlannerTaskComplex Parent
+        {
+            get;
+            set;
+        }
 
-        public bool PauseOnRun { get; set; }
-        public bool NotInterruptable { get; set; }
+        public bool PauseOnRun
+        {
+            get;
+            set;
+        }
+        public bool NotInterruptable
+        {
+            get;
+            set;
+        }
 
         #endregion Public properties
 
         #region Constructor
 
         public PlannerTask(BehaviorNode node, Agent pAgent)
-            : base()
+        : base()
         {
             this.m_node = node;
             this.m_id = this.m_node.GetId();
@@ -104,7 +116,7 @@ namespace behaviac
         //private object[] ParamsValue { get; set; }
 
         public PlannerTaskAction(BehaviorNode node, Agent pAgent)
-            : base(node, pAgent)
+        : base(node, pAgent)
         {
             Debug.Check(node is Action);
 
@@ -161,7 +173,7 @@ namespace behaviac
         }
 
         public PlannerTaskComplex(BehaviorNode node, Agent pAgent)
-            : base(node, pAgent)
+        : base(node, pAgent)
         {
         }
 
@@ -195,7 +207,7 @@ namespace behaviac
     public class PlannerTaskSequence : PlannerTaskComplex
     {
         public PlannerTaskSequence(BehaviorNode node, Agent pAgent)
-            : base(node, pAgent)
+        : base(node, pAgent)
         {
         }
 
@@ -213,7 +225,7 @@ namespace behaviac
     public class PlannerTaskSelector : PlannerTaskComplex
     {
         public PlannerTaskSelector(BehaviorNode node, Agent pAgent)
-            : base(node, pAgent)
+        : base(node, pAgent)
         {
         }
 
@@ -231,7 +243,7 @@ namespace behaviac
     public class PlannerTaskParallel : PlannerTaskComplex
     {
         public PlannerTaskParallel(BehaviorNode node, Agent pAgent)
-            : base(node, pAgent)
+        : base(node, pAgent)
         {
         }
 
@@ -249,7 +261,7 @@ namespace behaviac
     public class PlannerTaskLoop : PlannerTaskComplex
     {
         public PlannerTaskLoop(BehaviorNode node, Agent pAgent)
-            : base(node, pAgent)
+        : base(node, pAgent)
         {
         }
 
@@ -323,7 +335,7 @@ namespace behaviac
     public class PlannerTaskIterator : PlannerTaskComplex
     {
         public PlannerTaskIterator(BehaviorNode node, Agent pAgent)
-            : base(node, pAgent)
+        : base(node, pAgent)
         {
         }
 
@@ -365,7 +377,7 @@ namespace behaviac
     public class PlannerTaskReference : PlannerTaskComplex
     {
         public PlannerTaskReference(BehaviorNode node, Agent pAgent)
-            : base(node, pAgent)
+        : base(node, pAgent)
         {
         }
 
@@ -457,11 +469,13 @@ namespace behaviac
             else
             {
 #if !BEHAVIAC_RELEASE
+
                 if (!_logged)
                 {
                     pAgent.LogJumpTree(pNode.GetReferencedTree(pAgent));
                     _logged = true;
                 }
+
 #endif
                 Debug.Check(this.m_children.Count == 1);
                 BehaviorTask c = this.m_children[0];
@@ -481,7 +495,7 @@ namespace behaviac
     public class PlannerTaskTask : PlannerTaskComplex
     {
         public PlannerTaskTask(BehaviorNode node, Agent pAgent)
-            : base(node, pAgent)
+        : base(node, pAgent)
         {
         }
 
@@ -514,7 +528,7 @@ namespace behaviac
     public class PlannerTaskMethod : PlannerTaskComplex
     {
         public PlannerTaskMethod(BehaviorNode node, Agent pAgent)
-            : base(node, pAgent)
+        : base(node, pAgent)
         {
         }
 

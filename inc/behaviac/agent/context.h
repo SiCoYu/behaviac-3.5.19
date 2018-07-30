@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -11,28 +11,24 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef BEHAVIAC_CONTEXT_H
-#define BEHAVIAC_CONTEXT_H
+#ifndef _BEHAVIAC_CONTEXT_H_
+#define _BEHAVIAC_CONTEXT_H_
 
-#include "behaviac/base/base.h"
-
-#include "behaviac/base/dynamictype.h"
-#include "behaviac/base/core/factory.h"
-#include "behaviac/base/object/tagobject.h"
-#include "behaviac/base/core/string/stringid.h"
-#include "behaviac/base/string/stringutils.h"
+#include "behaviac/common/base.h"
+#include "behaviac/common/rttibase.h"
+#include "behaviac/common/factory.h"
+#include "behaviac/common/object/tagobject.h"
+#include "behaviac/common/string/stringcrc.h"
+#include "behaviac/common/string/stringutils.h"
 
 #include "behaviac/behaviortree/behaviortree_task.h"
 #include "behaviac/agent/state.h"
-#include "behaviac/agent/context.h"
-namespace behaviac
-{
-    class Property;
+//#include "behaviac/agent/context.h"
+namespace behaviac {
     class Agent;
     class BehaviorTreeTask;
     class Variables;
     class State_t;
-    class CNamedEvent;
 
     /*! \addtogroup Agent
     * @{
@@ -42,8 +38,7 @@ namespace behaviac
     /// The Context class
     /*!
     */
-    class BEHAVIAC_API Context
-    {
+    class BEHAVIAC_API Context {
     private:
         typedef behaviac::map<int, Context*> Contexts_t;
 
@@ -55,24 +50,10 @@ namespace behaviac
         static void execAgents(int contextId);
         static Context& GetContext(int contextId);
 
-		void AddAgent(Agent* pAgent);
-		void RemoveAgent(Agent* pAgent);
+        void AddAgent(Agent* pAgent);
+        void RemoveAgent(Agent* pAgent);
 
-		bool IsExecuting();
-
-        template<typename VariableType>
-        const VariableType* GetStaticVariable(const char* staticClassName, uint32_t variableId)
-        {
-            BEHAVIAC_ASSERT(!StringUtils::IsNullOrEmpty(staticClassName));
-
-            if (m_static_variables.find(staticClassName) == m_static_variables.end())
-            {
-                m_static_variables[staticClassName] = Variables();
-            }
-
-            const Variables& variables = m_static_variables[staticClassName];
-            return variables.Get<VariableType>(NULL, false, NULL, variableId);
-        }
+        bool IsExecuting();
 
         /**
         to cleanup the specified context.
@@ -85,8 +66,6 @@ namespace behaviac
 
         virtual ~Context();
 
-        void ResetChangedVariables();
-
         /**
         log changed static variables(propery) for the specified agent class or all agent classes
 
@@ -94,16 +73,6 @@ namespace behaviac
         if null, it logs for all the agent class
         */
         void LogStaticVariables(const char* agentClassName = 0);
-
-        /**
-        if staticClassName is no null, it is for static variable
-        */
-        template<typename VariableType>
-        void SetStaticVariable(const behaviac::CMemberBase* pMember, const char* variableName, const VariableType& value, const char* staticClassName, uint32_t varableId);
-
-        const CNamedEvent* FindEventStatic(const char* eventName, const char* className);
-        void InsertEventGlobal(const char* className, CNamedEvent* pEvent);
-        CNamedEvent* FindNamedEventTemplate(const behaviac::CTagObject::MethodsContainer& methods, const char* eventName);
 
         /**
         bind 'agentInstanceName' to 'pAgentInstance'.
@@ -127,8 +96,7 @@ namespace behaviac
         bool Load(const States_t& states);
 
         typedef behaviac::map<int, Agent*> Agents_t;
-        struct HeapItem_t
-        {
+        struct HeapItem_t {
             int priority;
             Agents_t agents;
         };
@@ -136,22 +104,18 @@ namespace behaviac
         void SetAgents(behaviac::vector<HeapItem_t> value);
         behaviac::vector<HeapItem_t> GetAgents();
 
-        struct HeapFinder_t
-        {
+        struct HeapFinder_t {
             int priority;
             HeapFinder_t(int p) : priority(p)
             {}
 
-            bool operator()(const HeapItem_t& item) const
-            {
+            bool operator()(const HeapItem_t& item) const {
                 return item.priority == priority;
             }
         };
 
-        struct  HeapCompare_t
-        {
-            bool operator()(const HeapItem_t& lhs, const HeapItem_t& rhs) const
-            {
+        struct  HeapCompare_t {
+            bool operator()(const HeapItem_t& lhs, const HeapItem_t& rhs) const {
                 return lhs.priority < rhs.priority;
             }
         };
@@ -165,12 +129,12 @@ namespace behaviac
         void execAgents_();
 
     private:
-		void DelayProcessingAgents();
-		void addAgent_(Agent* pAgent);
-		void removeAgent_(Agent* pAgent);
+        void DelayProcessingAgents();
+        void addAgent_(Agent* pAgent);
+        void removeAgent_(Agent* pAgent);
 
-		behaviac::vector<Agent*> delayAddedAgents;
-		behaviac::vector<Agent*> delayRemovedAgents;
+        behaviac::vector<Agent*> delayAddedAgents;
+        behaviac::vector<Agent*> delayRemovedAgents;
 
         typedef behaviac::map<behaviac::string, Agent*> NamedAgents_t;
         NamedAgents_t m_namedAgents;
@@ -178,13 +142,9 @@ namespace behaviac
         typedef behaviac::map<behaviac::string, Variables> AgentTypeStaticVariables_t;
         AgentTypeStaticVariables_t	m_static_variables;
 
-        typedef behaviac::map<CStringID, CNamedEvent*> AgentEvents_t;
-        typedef behaviac::map<behaviac::string, AgentEvents_t> AgentStaticEvents_t;
-        AgentStaticEvents_t	ms_eventInfosGlobal;
-
         int     m_context_id;
         bool    m_bCreatedByMe;
-		bool	m_IsExecuting;
+        bool	m_IsExecuting;
     };
     /*! @} */
     /*! @} */
@@ -192,4 +152,4 @@ namespace behaviac
 
 #include "context.inl"
 
-#endif//#ifndef BEHAVIAC_CONTEXT_H
+#endif//#ifndef _BEHAVIAC_CONTEXT_H_

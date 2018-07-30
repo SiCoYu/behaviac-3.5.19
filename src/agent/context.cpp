@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -15,58 +15,38 @@
 #include "behaviac/agent/agent.h"
 #include "behaviac/agent/state.h"
 
-#include "behaviac/base/core/thread/mutex.h"
-#include "behaviac/base/file/filesystem.h"
+#include "behaviac/common/thread/mutex_lock.h"
+#include "behaviac/common/file/filesystem.h"
 
-namespace behaviac
-{
+namespace behaviac {
     Context::Contexts_t* Context::ms_contexts = NULL;
 
-	Context::Context(int contextId) : m_context_id(contextId), m_bCreatedByMe(false), m_IsExecuting(false)
-    {
+    Context::Context(int contextId) : m_context_id(contextId), m_bCreatedByMe(false), m_IsExecuting(false) {
     }
 
-    Context::~Context()
-    {
-		m_IsExecuting = false;
+    Context::~Context() {
+        m_IsExecuting = false;
 
-		delayAddedAgents.clear();
-		delayRemovedAgents.clear();
+        delayAddedAgents.clear();
+        delayRemovedAgents.clear();
 
-        if (this->m_bCreatedByMe)
-        {
+        if (this->m_bCreatedByMe) {
             this->m_bCreatedByMe = false;
         }
 
         this->CleanupStaticVariables();
         this->CleanupInstances();
-
-		for (AgentStaticEvents_t::iterator it = ms_eventInfosGlobal.begin(); it != ms_eventInfosGlobal.end(); ++it)
-		{
-			AgentEvents_t& es = it->second;
-
-			for (AgentEvents_t::iterator itj = es.begin(); itj != es.end(); ++itj)
-			{
-				CNamedEvent* p = itj->second;
-				BEHAVIAC_DELETE(p);
-			}
-		}
-
-		ms_eventInfosGlobal.clear();
     }
 
-    Context& Context::GetContext(int contextId)
-    {
-        if (!ms_contexts)
-        {
+    Context& Context::GetContext(int contextId) {
+        if (!ms_contexts) {
             ms_contexts = BEHAVIAC_NEW Contexts_t;
         }
 
         BEHAVIAC_ASSERT(contextId >= 0);
         Contexts_t::iterator it = ms_contexts->find(contextId);
 
-        if (it != ms_contexts->end())
-        {
+        if (it != ms_contexts->end()) {
             Context* pContext = it->second;
             return *pContext;
         }
@@ -77,14 +57,10 @@ namespace behaviac
         return *pContext;
     }
 
-    void Context::Cleanup(int contextId)
-    {
-        if (ms_contexts)
-        {
-            if (contextId == -1)
-            {
-                for (Contexts_t::iterator it = ms_contexts->begin(); it != ms_contexts->end(); ++it)
-                {
+    void Context::Cleanup(int contextId) {
+        if (ms_contexts) {
+            if (contextId == -1) {
+                for (Contexts_t::iterator it = ms_contexts->begin(); it != ms_contexts->end(); ++it) {
                     Context* pContext = it->second;
 
                     BEHAVIAC_DELETE(pContext);
@@ -94,43 +70,32 @@ namespace behaviac
 
                 BEHAVIAC_DELETE(ms_contexts);
                 ms_contexts = 0;
-            }
-            else
-            {
+            } else {
                 Contexts_t::iterator it = ms_contexts->find(contextId);
 
-                if (it != ms_contexts->end())
-                {
+                if (it != ms_contexts->end()) {
                     Context* pContext = it->second;
 
                     BEHAVIAC_DELETE(pContext);
                     ms_contexts->erase(contextId);
-                }
-                else
-                {
+                } else {
                     BEHAVIAC_ASSERT(false, "unused context id");
                 }
             }
         }
     }
 
-    void Context::LogStaticVariables(const char* agentClassName)
-    {
-        if (agentClassName)
-        {
+    void Context::LogStaticVariables(const char* agentClassName) {
+        if (agentClassName) {
             AgentTypeStaticVariables_t::iterator it = m_static_variables.find(agentClassName);
 
-            if (it != m_static_variables.end())
-            {
+            if (it != m_static_variables.end()) {
                 Variables& variables = m_static_variables[agentClassName];
 
                 variables.Log(0, false);
             }
-        }
-        else
-        {
-            for (AgentTypeStaticVariables_t::iterator it = m_static_variables.begin(); it != m_static_variables.end(); ++it)
-            {
+        } else {
+            for (AgentTypeStaticVariables_t::iterator it = m_static_variables.begin(); it != m_static_variables.end(); ++it) {
                 Variables& variables = it->second;
 
                 variables.Log(0, false);
@@ -138,10 +103,8 @@ namespace behaviac
         }
     }
 
-    void Context::CleanupStaticVariables()
-    {
-        for (AgentTypeStaticVariables_t::iterator it = m_static_variables.begin(); it != m_static_variables.end(); ++it)
-        {
+    void Context::CleanupStaticVariables() {
+        for (AgentTypeStaticVariables_t::iterator it = m_static_variables.begin(); it != m_static_variables.end(); ++it) {
             Variables& variables = it->second;
             variables.Clear(true);
         }
@@ -149,17 +112,8 @@ namespace behaviac
         m_static_variables.clear();
     }
 
-    void Context::ResetChangedVariables()
-    {
-        for (AgentTypeStaticVariables_t::iterator it = m_static_variables.begin(); it != m_static_variables.end(); ++it)
-        {
-            Variables& variables = it->second;
-            variables.Reset();
-        }
-    }
 
-    void Context::CleanupInstances()
-    {
+    void Context::CleanupInstances() {
         //don't delete it as it is DestroyInstance's resposibity
         //for (Context::NamedAgents_t::iterator it = m_namedAgents.begin(); it != m_namedAgents.end(); ++it)
         //{
@@ -171,28 +125,23 @@ namespace behaviac
         m_namedAgents.clear();
     }
 
-    const char* GetNameWithoutClassName(const char* variableName)
-    {
+    const char* GetNameWithoutClassName(const char* variableName) {
         const char* pSep = strrchr(variableName, ':');
 
-        if (pSep && pSep[-1] == ':')
-        {
+        if (pSep && pSep[-1] == ':') {
             return pSep + 1;
         }
 
         return variableName;
     }
 
-    Agent* Context::GetInstance(const char* agentInstanceName)
-    {
+    Agent* Context::GetInstance(const char* agentInstanceName) {
         bool bValidName = agentInstanceName && agentInstanceName[0] != '\0';
 
-        if (bValidName)
-        {
+        if (bValidName) {
             NamedAgents_t::iterator it = m_namedAgents.find(agentInstanceName);
 
-            if (it != m_namedAgents.end())
-            {
+            if (it != m_namedAgents.end()) {
                 Agent* pA = it->second;
 
                 return pA;
@@ -204,56 +153,44 @@ namespace behaviac
         return 0;
     }
 
-    bool Context::BindInstance(const char* agentInstanceName, Agent* pAgentInstance)
-    {
-        if (Agent::IsInstanceNameRegistered(agentInstanceName))
-        {
+    bool Context::BindInstance(const char* agentInstanceName, Agent* pAgentInstance) {
+        if (Agent::IsInstanceNameRegistered(agentInstanceName)) {
             BEHAVIAC_ASSERT(!GetInstance(agentInstanceName), "the name has been bound to an instance already!");
 
             const char* className = Agent::GetRegisteredClassName(agentInstanceName);
 
-            CStringID btAgentClass(className);
+            CStringCRC btAgentClass(className);
 
-            if (pAgentInstance->IsAKindOf(btAgentClass))
-            {
+            if (pAgentInstance->IsAKindOf(btAgentClass)) {
                 m_namedAgents[agentInstanceName] = pAgentInstance;
 
                 return true;
             }
-        }
-        else
-        {
+        } else {
             BEHAVIAC_ASSERT(0);
         }
 
         return false;
     }
 
-    bool Context::UnbindInstance(const char* agentInstanceName)
-    {
-        if (Agent::IsInstanceNameRegistered(agentInstanceName))
-        {
+    bool Context::UnbindInstance(const char* agentInstanceName) {
+        if (Agent::IsInstanceNameRegistered(agentInstanceName)) {
             NamedAgents_t::iterator it = m_namedAgents.find(agentInstanceName);
 
-            if (it != m_namedAgents.end())
-            {
+            if (it != m_namedAgents.end()) {
                 m_namedAgents.erase(agentInstanceName);
 
                 return true;
             }
-        }
-        else
-        {
+        } else {
             BEHAVIAC_ASSERT(0);
         }
 
         return false;
     }
 
-    bool Context::Save(States_t& states)
-    {
-        for (AgentTypeStaticVariables_t::iterator it = m_static_variables.begin(); it != m_static_variables.end(); ++it)
-        {
+    bool Context::Save(States_t& states) {
+        for (AgentTypeStaticVariables_t::iterator it = m_static_variables.begin(); it != m_static_variables.end(); ++it) {
             const behaviac::string& className = it->first;
             Variables& variables = it->second;
 
@@ -266,17 +203,14 @@ namespace behaviac
         return true;
     }
 
-    bool Context::Load(const States_t& states)
-    {
-        for (States_t::const_iterator it = states.begin(); it != states.end(); ++it)
-        {
+    bool Context::Load(const States_t& states) {
+        for (States_t::const_iterator it = states.begin(); it != states.end(); ++it) {
             const behaviac::string& className = it->first;
             const State_t& state = it->second;
 
             AgentTypeStaticVariables_t::iterator itf = m_static_variables.find(className);
 
-            if (itf != m_static_variables.end())
-            {
+            if (itf != m_static_variables.end()) {
                 Variables& variables_f = itf->second;
 
                 state.m_vars.CopyTo(0, variables_f);
@@ -286,65 +220,49 @@ namespace behaviac
         return true;
     }
 
-	bool Context::IsExecuting()
-	{
-		return m_IsExecuting;
-	}
+    bool Context::IsExecuting() {
+        return m_IsExecuting;
+    }
 
-	void Context::AddAgent(Agent* pAgent)
-	{
-		if (pAgent != NULL)
-		{
-			if (IsExecuting())
-			{
-				delayAddedAgents.push_back(pAgent);
-			}
-			else
-			{
-				addAgent_(pAgent);
-			}
-		}
-	}
+    void Context::AddAgent(Agent* pAgent) {
+        if (pAgent != NULL) {
+            if (IsExecuting()) {
+                delayAddedAgents.push_back(pAgent);
+            } else {
+                addAgent_(pAgent);
+            }
+        }
+    }
 
-	void Context::RemoveAgent(Agent* pAgent)
-	{
-		if (pAgent != NULL)
-		{
-			if (IsExecuting())
-			{
-				delayRemovedAgents.push_back(pAgent);
-			}
-			else
-			{
-				removeAgent_(pAgent);
-			}
-		}
-	}
+    void Context::RemoveAgent(Agent* pAgent) {
+        if (pAgent != NULL) {
+            if (IsExecuting()) {
+                delayRemovedAgents.push_back(pAgent);
+            } else {
+                removeAgent_(pAgent);
+            }
+        }
+    }
 
-    void Context::addAgent_(Agent* pAgent)
-    {
+    void Context::addAgent_(Agent* pAgent) {
         ASSERT_MAIN_THREAD();
 
         int agentId = pAgent->GetId();
         int priority = pAgent->GetPriority();
         vector<behaviac::Context::HeapItem_t>::iterator it = std::find_if(this->m_agents.begin(), this->m_agents.end(), HeapFinder_t(priority));
 
-        if (it == this->m_agents.end())
-        {
+        if (it == this->m_agents.end()) {
             HeapItem_t pa;
             pa.priority = priority;
             pa.agents[agentId] = pAgent;
             this->m_agents.push_back(pa);
-        }
-        else
-        {
+        } else {
             HeapItem_t& pa = *it;
             pa.agents[agentId] = pAgent;
         }
     }
 
-    void Context::removeAgent_(Agent* pAgent)
-    {
+    void Context::removeAgent_(Agent* pAgent) {
         ASSERT_MAIN_THREAD();
 
         int agentId = pAgent->GetId();
@@ -352,104 +270,85 @@ namespace behaviac
 
         vector<behaviac::Context::HeapItem_t>::iterator it = std::find_if(this->m_agents.begin(), this->m_agents.end(), HeapFinder_t(priority));
 
-        if (it != this->m_agents.end())
-        {
+        if (it != this->m_agents.end()) {
             HeapItem_t& pa = *it;
 
             Agents_t::iterator ita = pa.agents.find(agentId);
 
-            if (ita != pa.agents.end())
-            {
+            if (ita != pa.agents.end()) {
                 pa.agents.erase(ita);
             }
         }
     }
 
-	void Context::DelayProcessingAgents()
-	{
-		if (delayAddedAgents.size() > 0)
-		{
-			for (unsigned int i = 0; i < delayAddedAgents.size(); ++i)
-			{
-				addAgent_(delayAddedAgents[i]);
-			}
+    void Context::DelayProcessingAgents() {
+        if (delayAddedAgents.size() > 0) {
+            for (unsigned int i = 0; i < delayAddedAgents.size(); ++i) {
+                addAgent_(delayAddedAgents[i]);
+            }
 
-			delayAddedAgents.clear();
-		}
+            delayAddedAgents.clear();
+        }
 
-		if (delayRemovedAgents.size() > 0)
-		{
-			for (unsigned int i = 0; i < delayRemovedAgents.size(); ++i)
-			{
-				removeAgent_(delayRemovedAgents[i]);
+        if (delayRemovedAgents.size() > 0) {
+            for (unsigned int i = 0; i < delayRemovedAgents.size(); ++i) {
+                removeAgent_(delayRemovedAgents[i]);
 
-				// It should be deleted absolutely here.
-				BEHAVIAC_DELETE(delayRemovedAgents[i]);
-			}
+                // It should be deleted absolutely here.
+                BEHAVIAC_DELETE(delayRemovedAgents[i]);
+            }
 
-			delayRemovedAgents.clear();
-		}
-	}
+            delayRemovedAgents.clear();
+        }
+    }
 
-    void Context::execAgents(int contextId)
-	{
-        if (contextId >= 0)
-        {
+    void Context::execAgents(int contextId) {
+        if (contextId >= 0) {
             Context& pContext = Context::GetContext(contextId);
 
-			pContext.execAgents_();
-        }
-		else if (ms_contexts != NULL)
-        {
-            for (Contexts_t::iterator it = ms_contexts->begin(); it != ms_contexts->end(); ++it)
-            {
+            pContext.execAgents_();
+        } else if (ms_contexts != NULL) {
+            for (Contexts_t::iterator it = ms_contexts->begin(); it != ms_contexts->end(); ++it) {
                 Context* pContext = it->second;
 
-				pContext->execAgents_();
+                pContext->execAgents_();
             }
         }
     }
 
-    void Context::execAgents_()
-    {
-		if (!Workspace::GetInstance()->IsExecAgents())
-		{
-			return;
-		}
+    void Context::execAgents_() {
+        if (!Workspace::GetInstance()->IsExecAgents()) {
+            return;
+        }
 
-		m_IsExecuting = true;
+        m_IsExecuting = true;
 
-		std::make_heap(this->m_agents.begin(), this->m_agents.end(), HeapCompare_t());
+        std::make_heap(this->m_agents.begin(), this->m_agents.end(), HeapCompare_t());
 
-        for (vector<behaviac::Context::HeapItem_t>::iterator it = this->m_agents.begin(); it != this->m_agents.end(); ++it)
-        {
+        for (vector<behaviac::Context::HeapItem_t>::iterator it = this->m_agents.begin(); it != this->m_agents.end(); ++it) {
             HeapItem_t& pa = *it;
 
-            for (Agents_t::iterator ita = pa.agents.begin(); ita != pa.agents.end(); ++ita)
-            {
+            for (Agents_t::iterator ita = pa.agents.begin(); ita != pa.agents.end(); ++ita) {
                 Agent* pA = ita->second;
 
-                if (pA->IsActive())
-                {
+                if (pA->IsActive()) {
                     pA->btexec();
                 }
 
-				// in case IsExecAgents was set to false by pA's bt
-                if (!Workspace::GetInstance()->IsExecAgents())
-                {
+                // in case IsExecAgents was set to false by pA's bt
+                if (!Workspace::GetInstance()->IsExecAgents()) {
                     break;
                 }
             }
         }
 
-        if (Agent::IdMask() != 0)
-        {
+        if (Agent::IdMask() != 0) {
             this->LogStaticVariables(0);
         }
 
-		m_IsExecuting = false;
+        m_IsExecuting = false;
 
-		this->DelayProcessingAgents();
+        this->DelayProcessingAgents();
     }
 
     //void Context::btexec()
@@ -463,111 +362,31 @@ namespace behaviac
     //    }
     //}
 
-    void Context::LogCurrentState()
-    {
+    void Context::LogCurrentState() {
         // char msg[256] = { 0 };
         //sprintf(msg, "LogCurrentStates %d %d", this->m_context_id, this->GetAgents().size());
-        for (vector<behaviac::Context::HeapItem_t>::iterator it = this->m_agents.begin(); it != this->m_agents.end(); ++it)
-        {
-            for (Agents_t::iterator pa = it->agents.begin(); pa != it->agents.end(); ++pa)
-            {
-                if (pa->second->IsMasked())
-                {
-                    pa->second->LogVariables(true);
+        for (vector<behaviac::Context::HeapItem_t>::iterator it = this->m_agents.begin(); it != this->m_agents.end(); ++it) {
+            for (Agents_t::iterator pa = it->agents.begin(); pa != it->agents.end(); ++pa) {
+                if (pa->second->IsMasked()) {
+					pa->second->LogVariables(true);
+
+					pa->second->LogRunningNodes();
                 }
             }
         }
     }
 
-    void Context::LogCurrentStates(int contextId)
-    {
-		if (ms_contexts != NULL)
-		{
-			if (contextId >= 0)
-			{
-				Context& pContext = Context::GetContext(contextId);
-				pContext.LogCurrentState();
-			}
-			else
-			{
-				for (Contexts_t::iterator pContext = ms_contexts->begin(); pContext != ms_contexts->end(); ++pContext)
-				{
-					pContext->second->LogCurrentState();
-				}
-			}
-		}
-    }
-
-    void Context::InsertEventGlobal(const char* className, CNamedEvent* pEvent)
-    {
-        const CNamedEvent* toFind = FindEventStatic(className, pEvent->GetName());
-
-        if (!toFind)
-        {
-            AgentStaticEvents_t::iterator it = ms_eventInfosGlobal.find(className);
-
-            if (it == ms_eventInfosGlobal.end())
-            {
-                AgentEvents_t emptyTemp;
-                ms_eventInfosGlobal.insert(AgentStaticEvents_t::value_type(className, emptyTemp));
-
-                it = ms_eventInfosGlobal.find(className);
-            }
-
-            AgentEvents_t& events = it->second;
-
-            CNamedEvent* e = (CNamedEvent*)pEvent->clone();
-            CStringID eventId(e->GetName());
-            events.insert(AgentEvents_t::value_type(eventId, e));
-        }
-    }
-
-    const CNamedEvent* Context::FindEventStatic(const char* eventName, const char* className)
-    {
-        AgentStaticEvents_t::iterator it = ms_eventInfosGlobal.find(className);
-
-        if (it != ms_eventInfosGlobal.end())
-        {
-            AgentEvents_t& events = it->second;
-            CStringID eventID(eventName);
-            AgentEvents_t::iterator itevt = events.find(eventID);
-
-            if (itevt != events.end())
-            {
-                CNamedEvent* pEvent = itevt->second;
-                return pEvent;
-            }
-        }
-
-        return 0;
-    }
-
-    CNamedEvent* Context::FindNamedEventTemplate(const behaviac::CTagObject::MethodsContainer& methods, const char* eventName)
-    {
-        CStringID eventID(eventName);
-
-        //reverse, so the event in the derived class can override the one in the base class
-        for (behaviac::CTagObject::MethodsContainer::const_reverse_iterator it = methods.rbegin(); it != methods.rend(); ++it)
-        {
-            const behaviac::CMethodBase* pMethod = *it;
-
-            const char* methodName = pMethod->GetName();
-            CStringID methodID(methodName);
-
-            if (methodID == eventID && pMethod->IsNamedEvent())
-            {
-                CNamedEvent* pNamedMethod = (CNamedEvent*)pMethod;
-
-                if (pNamedMethod->IsStatic())
-                {
-                    InsertEventGlobal(pNamedMethod->GetClassNameString(), pNamedMethod);
-                    return pNamedMethod;
+    void Context::LogCurrentStates(int contextId) {
+        if (ms_contexts != NULL) {
+            if (contextId >= 0) {
+                Context& pContext = Context::GetContext(contextId);
+                pContext.LogCurrentState();
+            } else {
+                for (Contexts_t::iterator pContext = ms_contexts->begin(); pContext != ms_contexts->end(); ++pContext) {
+                    pContext->second->LogCurrentState();
                 }
-
-                return pNamedMethod;
             }
         }
-
-        return 0;
     }
+
 }

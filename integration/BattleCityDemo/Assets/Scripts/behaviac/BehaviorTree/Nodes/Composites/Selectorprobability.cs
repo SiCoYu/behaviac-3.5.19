@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
+// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
@@ -24,6 +24,7 @@ namespace behaviac
             for (int i = 0; i < properties.Count; ++i)
             {
                 property_t p = properties[i];
+
                 if (p.name == "RandomGenerator")
                 {
                     this.m_method = AgentMeta.ParseMethod(p.value);
@@ -92,7 +93,12 @@ namespace behaviac
             protected override bool onenter(Agent pAgent)
             {
                 Debug.Check(this.m_children.Count > 0);
-                Debug.Check(this.m_activeChildIndex == CompositeTask.InvalidChildIndex);
+				
+				//if the following assert failed, just comment it out
+                //Debug.Check(this.m_activeChildIndex == CompositeTask.InvalidChildIndex);
+
+				//to reset it anyway in case onexit is not called for some reason
+				this.m_activeChildIndex = CompositeTask.InvalidChildIndex;
 
                 //SelectorProbability pSelectorProbabilityNode = this.GetNode() is SelectorProbability;
 

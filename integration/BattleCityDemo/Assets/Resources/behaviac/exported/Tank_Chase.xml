@@ -4,7 +4,7 @@
 <behavior name="Tank_Chase" agenttype="Player" version="5">
   <pars>
     <par name="parT_enemyPosition" type="UnityEngine::Vector3" value="{x=0;y=0;z=0;}" />
-    <par name="parT_nearestEnemy" type="behaviac::Agent" value="null" />
+    <par name="parT_nearestEnemy" type="behaviac::Agent*" value="null" />
   </pars>
   <node class="DecoratorLoop" id="4">
     <property Count="const int -1" />
